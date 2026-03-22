@@ -22,19 +22,30 @@ const cors = require('cors');
 let firebaseAdmin = null;
 try {
   const admin = require('firebase-admin');
-  const keyPath = process.env.FIREBASE_KEY_PATH || './firebase-key.json';
-  if (fs.existsSync(keyPath)) {
-    const serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+  
+  // 1. Önce Railway'deki JSON değişkenine bak (Canlı ortam için)
+  if (process.env.FIREBASE_KEY_JSON) {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_KEY_JSON);
     admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
     firebaseAdmin = admin;
-    console.log('✅ Firebase Admin initialized');
-  } else {
-    console.log('⚠️  firebase-key.json not found — Firebase auth disabled, using local auth');
+    console.log('✅ Firebase Admin (Railway JSON üzerinden) başlatıldı');
+  } 
+  // 2. Eğer o yoksa, bilgisayardaki dosyaya bak (Senin bilgisayarın için)
+  else {
+    const keyPath = process.env.FIREBASE_KEY_PATH || './firebase-key.json';
+    const fs = require('fs');
+    if (fs.existsSync(keyPath)) {
+      const serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+      admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+      firebaseAdmin = admin;
+      console.log('✅ Firebase Admin (Yerel dosya üzerinden) başlatıldı');
+    } else {
+      console.log('⚠️ firebase-key.json not found - Firebase auth disabled');
+    }
   }
 } catch (e) {
-  console.log('⚠️  firebase-admin not installed — run: npm install firebase-admin');
+  console.log('⚠️ Firebase başlatılamadı:', e.message);
 }
-
 const app = express();
 const server = http.createServer(app);
 // ── MIDDLEWARE (SIRALAMA DÜZELTİLDİ - EN ÖNEMLİ KISIM) ─────
