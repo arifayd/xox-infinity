@@ -47,6 +47,7 @@ try {
   console.log('⚠️ Firebase başlatılamadı:', e.message);
 }
 const app = express();
+app.set('trust proxy', 1); // Railway'in proxy'sine güven ve gerçek kullanıcı IP'sini al
 const server = http.createServer(app);
 // ── MIDDLEWARE (SIRALAMA DÜZELTİLDİ - EN ÖNEMLİ KISIM) ─────
 app.use(cors()); // Pop-up ve socket için geniş izin
