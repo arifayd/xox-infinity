@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XOX Arena - Admin Panel</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #0a0a12;
+      --surface: #12121e;
+      --surface2: #1a1a2e;
+      --surface3: #22223a;
+      --accent: #ff4d6d;
+      --accent2: #4cc9f0;
+      --gold: #ffd700;
+      --text: #f0f0f8;
+      --text-dim: #8080a0;
+      --border: rgba(255, 255, 255, 0.08);
+      --success: #4ade80;
+      --danger: #ff6b6b;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at 20% 20%, rgba(76, 201, 240, 0.06) 0%, transparent 50%), 
+                  radial-gradient(ellipse at 80% 80%, rgba(255, 77, 109, 0.06) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 280px;
+      background: var(--surface2);
+      border-right: 1px solid var(--border);
+      padding: 20px;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 900;
+      margin-bottom: 30px;
+      background: linear-gradient(135deg, #ff4d6d, #4cc9f0);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-item {
+      padding: 12px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-bottom: 8px;
+      transition: background 0.2s;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-dim);
+      border-left: 3px solid transparent;
+    }
+
+    .nav-item:hover {
+      background: var(--surface3);
+    }
+
+    .nav-item.active {
+      background: rgba(76, 201, 240, 0.15);
+      color: var(--accent2);
+      border-left-color: var(--accent2);
+    }
+
+    /* MAIN CONTENT */
+    .main {
+      margin-left: 280px;
+      flex: 1;
+      padding: 30px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header h1 {
+      font-size: 28px;
+    }
+
+    .logout-btn {
+      padding: 10px 20px;
+      background: var(--danger);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+
+    .logout-btn:hover {
+      opacity: 0.8;
+    }
+
+    /* TABS */
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--text-dim);
+    }
+
+    .tab.active {
+      background: var(--accent2);
+      color: #000;
+      border-color: var(--accent2);
+    }
+
+    /* CONTENT AREAS */
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* TABLES */
+    .table-wrap {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: var(--surface3);
+    }
+
+    th {
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+    }
+
+    td {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    tr:hover td {
+      background: rgba(76, 201, 240, 0.05);
+    }
+
+    /* STATS CARDS */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 900;
+      color: var(--accent2);
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* BUTTONS */
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: black;
+    }
+
+    .btn-primary {
+      background: var(--accent2);
+      color: black;
+    }
+
+    .btn:hover {
+      opacity: 0.8;
+    }
+
+    /* MODALS */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 30px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent2);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .modal-actions button {
+      flex: 1;
+    }
+
+    /* ALERTS */
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    .alert-success {
+      background: rgba(74, 222, 128, 0.15);
+      border: 1px solid rgba(74, 222, 128, 0.3);
+      color: var(--success);
+    }
+
+    .alert-danger {
+      background: rgba(255, 107, 107, 0.15);
+      border: 1px solid rgba(255, 107, 107, 0.3);
+      color: var(--danger);
+    }
+
+    .search-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 16px;
+      margin-bottom: 20px;
+      color: var(--text);
+    }
+
+    .search-box::placeholder {
+      color: var(--text-dim);
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100px;
+      }
+
+      .main {
+        margin-left: 100px;
+        padding: 15px;
+      }
+
+      th, td {
+        padding: 8px;
+        font-size: 12px;
+      }
+
+      .stat-value {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="logo">⚔️ XOX</div>
+      <div class="nav-item active" onclick="switchTab('dashboard')">📊 Dashboard</div>
+      <div class="nav-item" onclick="switchTab('users')">👥 Users</div>
+      <div class="nav-item" onclick="switchTab('reports')">🚩 Reports</div>
+      <div class="nav-item" onclick="switchTab('matches')">🎮 Matches</div>
+      <div class="nav-item" onclick="switchTab('clans')">🏰 Clans</div>
+      <hr style="border: none; border-top: 1px solid var(--border); margin: 20px 0;">
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main">
+      <div class="header">
+        <h1>XOX Arena Admin Panel</h1>
+        <div id="admin-info">Loading...</div>
+      </div>
+
+      <!-- ALERTS -->
+      <div id="alerts-container"></div>
+
+      <!-- DASHBOARD TAB -->
+      <div id="dashboard" class="tab-content active">
+        <h2 style="margin-bottom: 20px;">Dashboard</h2>
+        
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-users">0</div>
+            <div class="stat-label">Total Users</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-matches">0</div>
+            <div class="stat-label">Total Matches</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-clans">0</div>
+            <div class="stat-label">Active Clans</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-reports">0</div>
+            <div class="stat-label">Pending Reports</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-banned">0</div>
+            <div class="stat-label">Banned Users</div>
+          </div>
+        </div>
+
+        <h3 style="margin-bottom: 16px;">Recent Activity</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Event</th>
+                <th>User</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody id="activity-list">
+              <tr>
+                <td colspan="3" style="text-align: center; color: var(--text-dim);">No recent activity</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- USERS TAB -->
+      <div id="users" class="tab-content">
+        <h2 style="margin-bottom: 20px;">User Management</h2>
+        
+        <input type="text" class="search-box" id="user-search" placeholder="Search by username...">
+        
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Elo</th>
+                <th>Wins</th>
+                <th>Losses</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-list">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-dim);">Loading...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- REPORTS TAB -->
+      <div id="reports" class="tab-content">
+        <h2 style="margin-bottom: 20px;">Player Reports</h2>
+        
+        <div class="tabs" style="margin-bottom: 20px;">
+          <div class="tab active" onclick="filterReports('pending')">🟡 Pending</div>
+          <div class="tab" onclick="filterReports('resolved')">✅ Resolved</div>
+          <div class="tab" onclick="filterReports('dismissed')">❌ Dismissed</div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Reporter</th>
+                <th>Reported User</th>
+                <th>Reason</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="reports-list">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-dim);">Loading...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MATCHES TAB -->
+      <div id="matches" class="tab-content">
+        <h2 style="margin-bottom: 20px;">Match History</h2>
+        
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Player 1</th>
+                <th>Player 2</th>
+                <th>Winner</th>
+                <th>Mode</th>
+                <th>Duration</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="matches-list">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-dim);">Loading...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CLANS TAB -->
+      <div id="clans" class="tab-content">
+        <h2 style="margin-bottom: 20px;">Clan Management</h2>
+        
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Clan Name</th>
+                <th>Leader</th>
+                <th>Members</th>
+                <th>Level</th>
+                <th>Created</th>
+              </tr>
+            </thead>
+            <tbody id="clans-list">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-dim);">Loading...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BAN MODAL -->
+  <div id="ban-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-title">Ban User</div>
+      <div class="form-group">
+        <label class="form-label">User ID</label>
+        <input type="text" class="form-input" id="ban-user-id" disabled>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Reason</label>
+        <textarea class="form-input" id="ban-reason" style="resize: vertical;" rows="4" placeholder="Enter ban reason..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-danger" onclick="confirmBan()">Ban User</button>
+        <button class="btn btn-primary" onclick="closeBanModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPORT ACTION MODAL -->
+  <div id="report-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-title">Handle Report</div>
+      <div class="form-group">
+        <label class="form-label">Report ID</label>
+        <input type="text" class="form-input" id="report-id" disabled>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Resolution</label>
+        <select class="form-input" id="report-resolution">
+          <option value="">Select action...</option>
+          <option value="ban">Ban Reported User</option>
+          <option value="dismiss">Dismiss Report</option>
+          <option value="warn">Warn Reported User</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-success" onclick="resolveReport()">Confirm</button>
+        <button class="btn btn-primary" onclick="closeReportModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = '/api';
+    let token = localStorage.getItem('xox_token');
+    let currentReportFilter = 'pending';
+
+    // CHECK AUTH
+    if (!token) {
+      window.location.href = '/';
+    }
+
+    // FETCH DATA ON LOAD
+    window.addEventListener('load', () => {
+      loadDashboard();
+      loadUsers();
+      loadReports();
+      loadMatches();
+      loadClans();
+    });
+
+    // TAB SWITCHING
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      
+      document.getElementById(tabName).classList.add('active');
+      event.target.classList.add('active');
+
+      if (tabName === 'users') loadUsers();
+      if (tabName === 'reports') loadReports();
+      if (tabName === 'matches') loadMatches();
+      if (tabName === 'clans') loadClans();
+    }
+
+    // API CALLS
+    async function apiCall(endpoint, method = 'GET', body = null) {
+      const options = {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      };
+
+      if (body) options.body = JSON.stringify(body);
+
+      const response = await fetch(`${API_URL}${endpoint}`, options);
+      if (response.status === 401) {
+        localStorage.removeItem('xox_token');
+        window.location.href = '/';
+      }
+      return response.json();
+    }
+
+    async function loadDashboard() {
+      const users = await apiCall('/admin/users');
+      if (users.success) {
+        document.getElementById('stat-users').textContent = users.users.length;
+        document.getElementById('stat-banned').textContent = users.users.filter(u => u.is_banned).length;
+      }
+    }
+
+    async function loadUsers() {
+      const data = await apiCall('/admin/users');
+      if (!data.success) return;
+
+      const tbody = document.getElementById('users-list');
+      tbody.innerHTML = data.users.map(user => `
+        <tr>
+          <td>${user.username}</td>
+          <td>${user.elo || 1500}</td>
+          <td>${user.wins}</td>
+          <td>${user.losses}</td>
+          <td>${user.is_banned ? '🚫 BANNED' : '✅ Active'}</td>
+          <td>
+            ${!user.is_banned ? `<button class="btn btn-danger" onclick="openBanModal(${user.id})">Ban</button>` : ''}
+            <button class="btn btn-primary" onclick="viewProfile(${user.id})">View</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function loadReports() {
+      const data = await apiCall('/admin/reports');
+      if (!data.success) return;
+
+      const tbody = document.getElementById('reports-list');
+      const filtered = data.reports.filter(r => r.status === currentReportFilter);
+      
+      tbody.innerHTML = filtered.map(report => `
+        <tr>
+          <td>${report.reporter_id}</td>
+          <td>${report.reported_user_id}</td>
+          <td>${report.reason}</td>
+          <td>${new Date(report.created_at).toLocaleDateString()}</td>
+          <td>${report.status}</td>
+          <td>
+            <button class="btn btn-primary" onclick="openReportModal(${report.id})">Review</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function loadMatches() {
+      // Placeholder - would fetch from /api/admin/matches
+      console.log('Loading matches...');
+    }
+
+    function loadClans() {
+      // Placeholder - would fetch from /api/clans
+      console.log('Loading clans...');
+    }
+
+    function filterReports(filter) {
+      currentReportFilter = filter;
+      document.querySelectorAll('#reports .tabs .tab').forEach(el => el.classList.remove('active'));
+      event.target.classList.add('active');
+      loadReports();
+    }
+
+    // MODALS
+    function openBanModal(userId) {
+      document.getElementById('ban-user-id').value = userId;
+      document.getElementById('ban-modal').classList.add('show');
+    }
+
+    function closeBanModal() {
+      document.getElementById('ban-modal').classList.remove('show');
+    }
+
+    async function confirmBan() {
+      const userId = document.getElementById('ban-user-id').value;
+      const reason = document.getElementById('ban-reason').value;
+
+      const result = await apiCall('/admin/ban-user', 'POST', { userId: parseInt(userId), reason });
+      if (result.success) {
+        showAlert('User banned successfully', 'success');
+        closeBanModal();
+        loadUsers();
+      } else {
+        showAlert('Error banning user', 'danger');
+      }
+    }
+
+    function openReportModal(reportId) {
+      document.getElementById('report-id').value = reportId;
+      document.getElementById('report-modal').classList.add('show');
+    }
+
+    function closeReportModal() {
+      document.getElementById('report-modal').classList.remove('show');
+    }
+
+    async function resolveReport() {
+      const reportId = document.getElementById('report-id').value;
+      const resolution = document.getElementById('report-resolution').value;
+
+      if (!resolution) {
+        showAlert('Please select an action', 'danger');
+        return;
+      }
+
+      // API call would go here
+      showAlert(`Report ${reportId} resolved as ${resolution}`, 'success');
+      closeReportModal();
+      loadReports();
+    }
+
+    function showAlert(message, type) {
+      const container = document.getElementById('alerts-container');
+      const alert = document.createElement('div');
+      alert.className = `alert alert-${type}`;
+      alert.textContent = message;
+      container.appendChild(alert);
+
+      setTimeout(() => alert.remove(), 3000);
+    }
+
+    function logout() {
+      localStorage.removeItem('xox_token');
+      window.location.href = '/';
+    }
+
+    function viewProfile(userId) {
+      // Would open user profile modal
+      console.log('View profile:', userId);
+    }
+  </script>
+</body>
+</html>

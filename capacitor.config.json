@@ -1,0 +1,23 @@
+{
+  "appId": "com.xoxarena.app",
+  "appName": "XOX Arena",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "https"
+  },
+  "ios": {
+    "contentInsetAdjustmentBehavior": "automatic"
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "Keyboard": {
+      "resize": "body"
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  }
+}
