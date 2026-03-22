@@ -10,7 +10,7 @@
     "migrate-to-postgres": "node scripts/migrate-json-to-pg.js"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=20.0.0"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
