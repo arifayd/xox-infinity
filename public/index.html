@@ -174,6 +174,7 @@
       <div class="ig"><label class="il" data-t="email">E-posta / Kullanıcı Adı</label><input type="text" id="lu" class="inp" data-tp="ph_email" placeholder="ornek@email.com"></div>
       <div class="ig"><label class="il" data-t="password">Şifre</label><input type="password" id="lp" class="inp" data-tp="ph_pass" placeholder="min 6 karakter"></div>
       <button class="btn bp" onclick="login()" data-t="login_btn">Giriş Yap</button>
+      <div style="text-align:center;margin-top:12px"><button onclick="forgotPass()" style="background:none;border:none;color:var(--ac2);font-size:13px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;text-decoration:underline">Şifremi Unuttum</button></div>
     </div>
     <div class="ac" id="rf" style="display:none;border-top:2px solid var(--ac)">
       <div class="at" style="background:linear-gradient(135deg,#ff4d6d,#e0225a);-webkit-background-clip:text;-webkit-text-fill-color:transparent" data-t="register_title">KAYIT OL</div>
@@ -405,6 +406,17 @@
 
     function sTab(tab){document.getElementById('lf').style.display=tab==='login'?'block':'none';document.getElementById('rf').style.display=tab==='register'?'block':'none';document.getElementById('tl').className='tab'+(tab==='login'?' al':'');document.getElementById('tr').className='tab'+(tab==='register'?' ar':'')}
     
+    async function forgotPass(){
+      const em=document.getElementById('lu').value;
+      if(!em||!em.includes('@')){sE('login-error','E-posta adresini gir');return}
+      try{
+        await fbAuth.sendPasswordResetEmail(em);
+        const m=document.getElementById('login-error');
+        m.textContent='✅ Şifre sıfırlama maili gönderildi! E-postanı kontrol et.';
+        m.className='sm show';
+      }catch(e){sE('login-error',e.message.includes('user-not-found')?'Bu e-posta kayıtlı değil':e.message)}
+    }
+
     async function login(){
       const em=document.getElementById('lu').value,p=document.getElementById('lp').value;
       if(!em||!p){sE('login-error',t('email')+' & '+t('password'));return}
@@ -473,6 +485,17 @@
     const isCapacitor = typeof window.Capacitor !== 'undefined';
     
     function renderGoogleButton(){
+      if(!fbAuth) return;
+      const container = document.getElementById('google-btn-login');
+      if(!container) return;
+      
+      if(isCapacitor){
+        // Android/iOS: use custom button with Firebase signInWithPopup
+        container.innerHTML='<button onclick="googleSignInPopup()" class="gbtn" style="gap:10px"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"> Google ile Giriş Yap</button>';
+        return;
+      }
+      
+      // Web: use Google Identity Services
       if(!FIREBASE_CONFIG.googleClientId) return;
       if(typeof google === 'undefined' || !google.accounts || !google.accounts.id){
         setTimeout(renderGoogleButton, 300);
@@ -483,12 +506,34 @@
         callback: onGoogleCredential,
         itp_support: true
       });
-      const container = document.getElementById('google-btn-login');
       if(container){
         google.accounts.id.renderButton(container, {
           type: 'standard', theme: 'outline', size: 'large',
           text: 'signin_with', shape: 'pill', width: 300
         });
+      }
+    }
+    
+    async function googleSignInPopup(){
+      try{
+        const provider = new firebase.auth.GoogleAuthProvider();
+        const result = await fbAuth.signInWithPopup(provider);
+        const user = result.user;
+        const idToken = await user.getIdToken();
+        const displayName = user.displayName || user.email.split('@')[0];
+        const r = await fetch('/api/auth/firebase', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({idToken, username: displayName, language: L})
+        });
+        const d = await r.json();
+        if(d.success){
+          localStorage.setItem('gl_token', d.token);U=d.user;cS();
+          if(d.isNewUser){document.getElementById('unameDisplay').textContent=U.username;sS('username-screen')}
+          else{sS('home-screen');uH()}
+        } else alert(d.error);
+      }catch(e){
+        if(e.code!=='auth/popup-closed-by-user') alert('Google giriş hatası: '+e.message);
       }
     }
     
@@ -913,25 +958,41 @@
       const apiMode = mode==='league' ? 'league' : (mode||'normal');
       const endpoint = mode==='league' ? '/api/leaderboard/trophies' : '/api/leaderboard/elo?mode='+apiMode;
       fetch(endpoint).then(r=>r.json()).then(d=>{
-        if(d.success){
-          if(mode==='league'){
-            document.getElementById('lb-list').innerHTML=d.users.map((u,i)=>{
-              const trophies=u.trophies||0;
-              const lc=getLeagueClass(trophies);
-              const leagueName=gl(trophies);
-              return `<div class="lbi"><div class="lbr">#${i+1}</div><div class="lba">🏆</div><div class="lbn">${u.username}<br><span class="league-badge ${lc}">${leagueName}</span></div><div class="lbs">${trophies} 🏆</div></div>`;
-            }).join('')||'<div style="padding:20px;text-align:center;color:var(--dim)">-</div>';
-          } else {
-            const eloKey = mode==='rapid'?'elo_rapid':(mode==='blitz'?'elo_blitz':'elo_normal');
-            document.getElementById('lb-list').innerHTML=d.users.map((u,i)=>{
-              const elo = u[eloKey] || Math.max(u.elo_normal||1500, u.elo_rapid||1500, u.elo_blitz||1500);
-              const trophies = u.trophies||0;
-              const lc = getLeagueClass(trophies);
-              return `<div class="lbi"><div class="lbr">#${i+1}</div><div class="lba">⚔️</div><div class="lbn">${u.username} <span class="league-badge ${lc}">${gl(trophies).replace(/^[^\s]+\s/,'')}</span></div><div class="lbs">${elo}</div></div>`;
-            }).join('')||'<div style="padding:20px;text-align:center;color:var(--dim)">-</div>';
-          }
+        if(!d.success)return;
+        const myName=U?U.username:null;
+        if(mode==='league'){
+          const all=d.users.map((u,i)=>({...u,rank:i+1}));
+          const myIdx=all.findIndex(u=>u.username===myName);
+          const visible=buildLeaderboardView(all,myIdx);
+          document.getElementById('lb-list').innerHTML=visible.map(item=>{
+            if(item.sep)return '<div style="text-align:center;color:var(--dim);padding:6px;font-size:13px">• • •</div>';
+            const u=item;const trophies=u.trophies||0;const lc=getLeagueClass(trophies);const isMe=u.username===myName;
+            return `<div class="lbi" style="${isMe?'border-color:var(--gold);background:rgba(255,215,0,.06)':''}"><div class="lbr">#${u.rank}</div><div class="lba">🏆</div><div class="lbn">${u.username}${isMe?' ⭐':''}<br><span class="league-badge ${lc}">${gl(trophies)}</span></div><div class="lbs">${trophies} 🏆</div></div>`;
+          }).join('')||'<div style="padding:20px;text-align:center;color:var(--dim)">-</div>';
+        } else {
+          const eloKey=mode==='rapid'?'elo_rapid':(mode==='blitz'?'elo_blitz':'elo_normal');
+          const all=d.users.map((u,i)=>({...u,rank:i+1}));
+          const myIdx=all.findIndex(u=>u.username===myName);
+          const visible=buildLeaderboardView(all,myIdx);
+          document.getElementById('lb-list').innerHTML=visible.map(item=>{
+            if(item.sep)return '<div style="text-align:center;color:var(--dim);padding:6px;font-size:13px">• • •</div>';
+            const u=item;const elo=u[eloKey]||Math.max(u.elo_normal||1500,u.elo_rapid||1500,u.elo_blitz||1500);const trophies=u.trophies||0;const lc=getLeagueClass(trophies);const isMe=u.username===myName;
+            return `<div class="lbi" style="${isMe?'border-color:var(--gold);background:rgba(255,215,0,.06)':''}"><div class="lbr">#${u.rank}</div><div class="lba">⚔️</div><div class="lbn">${u.username}${isMe?' ⭐':''} <span class="league-badge ${lc}">${gl(trophies).replace(/^[^\s]+\s/,'')}</span></div><div class="lbs">${elo}</div></div>`;
+          }).join('')||'<div style="padding:20px;text-align:center;color:var(--dim)">-</div>';
         }
       });
+    }
+    // Build view: top 10 + separator + self with neighbors
+    function buildLeaderboardView(all,myIdx){
+      if(all.length<=15)return all; // Small list, show all
+      const top10=all.slice(0,10);
+      if(myIdx<0)return top10; // User not found
+      if(myIdx<10)return all.slice(0,15); // User in top 10, show top 15
+      // User below top 10: show top10 + separator + neighbors
+      const start=Math.max(10,myIdx-1);
+      const end=Math.min(all.length,myIdx+2);
+      const neighbors=all.slice(start,end);
+      return [...top10,{sep:true},...neighbors];
     }
 
     // ── FRIENDS ───

@@ -1176,10 +1176,19 @@ io.on('connection', (socket) => {
     
     const eloField = gameMode === 'rapid' ? 'elo_rapid' : (gameMode === 'blitz' ? 'elo_blitz' : 'elo_normal');
     const playerModeElo = player[eloField] || player.elo || 1500;
-    const tolerance = 200;
-    const matchIdx = waitingQueue.findIndex(
-      p => Math.abs(p.elo - playerModeElo) <= tolerance && p.gameMode === gameMode
-    );
+    const tolerance = 300;
+    
+    // Find closest ELO match in same game mode
+    let bestIdx = -1, bestDiff = Infinity;
+    waitingQueue.forEach((p, idx) => {
+      if (p.gameMode !== gameMode) return;
+      const diff = Math.abs(p.elo - playerModeElo);
+      if (diff <= tolerance && diff < bestDiff) {
+        bestDiff = diff;
+        bestIdx = idx;
+      }
+    });
+    const matchIdx = bestIdx;
     
     if (matchIdx >= 0) {
       const opponent = waitingQueue.splice(matchIdx, 1)[0];

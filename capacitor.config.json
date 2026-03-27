@@ -3,14 +3,13 @@
   "appName": "XOX Arena",
   "webDir": "public",
   "server": {
+    "url": "https://xox-infinity-production.up.railway.app",
+    "cleartext": true,
     "androidScheme": "https",
     "iosScheme": "https"
   },
-  "ios": {
-    "contentInsetAdjustmentBehavior": "automatic"
-  },
   "android": {
-    "allowMixedContent": false
+    "allowMixedContent": true
   },
   "plugins": {
     "Keyboard": {
