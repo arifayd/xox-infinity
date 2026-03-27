@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "274803484143",
+    "project_id": "xoxinfinity-96dce",
+    "storage_bucket": "xoxinfinity-96dce.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:274803484143:android:bed56b6a9e93ff3dc1021a",
+        "android_client_info": {
+          "package_name": "com.xoxarena.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "274803484143-edbs4631etfhlgh7cb01u0h6v97g0mn9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.xoxarena.app",
+            "certificate_hash": "075df3bd3c372edd0914db4bdff70a74dd57cd67"
+          }
+        },
+        {
+          "client_id": "274803484143-8vr4gfje3volompe4jg43gbaglh4r7i4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtZHLSLtlGBDe41y0YS8LsrkRddCjK98E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "274803484143-8vr4gfje3volompe4jg43gbaglh4r7i4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
