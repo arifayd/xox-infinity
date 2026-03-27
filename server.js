@@ -89,6 +89,53 @@ app.use('/api/auth/', authLimiter);
 app.use('/api/', apiLimiter);
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Google OAuth popup page for Android WebView
+app.get('/auth/google-popup', (req, res) => {
+  res.send(`<!DOCTYPE html><html><head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<style>body{background:#0a0a12;color:#f0f0f8;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+.box{text-align:center;padding:40px}.spin{border:4px solid #333;border-top:4px solid #4cc9f0;border-radius:50%;width:40px;height:40px;animation:s 1s linear infinite;margin:20px auto}@keyframes s{to{transform:rotate(360deg)}}</style>
+</head><body><div class="box"><div class="spin"></div><p>Google hesabına yönlendiriliyorsun...</p></div>
+<script>
+const fc = ${JSON.stringify({apiKey: process.env.FIREBASE_API_KEY || '', authDomain: process.env.FIREBASE_AUTH_DOMAIN || ''})};
+// Try to get config from opener
+let config = fc;
+try { if(window.opener && window.opener.FIREBASE_CONFIG) config = window.opener.FIREBASE_CONFIG; } catch(e){}
+// Fallback: fetch from firebase-config.js
+if(!config.apiKey){
+  fetch('/firebase-config.js').then(r=>r.text()).then(t=>{
+    try{eval(t); if(typeof FIREBASE_CONFIG!=='undefined') config=FIREBASE_CONFIG;} catch(e){}
+    startAuth();
+  }).catch(()=>startAuth());
+} else { startAuth(); }
+
+function startAuth(){
+  if(!config.apiKey){document.querySelector('p').textContent='Firebase yapılandırma hatası';return;}
+  const app = firebase.initializeApp(config, 'popup');
+  const auth = firebase.auth(app);
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({prompt:'select_account'});
+  auth.signInWithPopup(provider).then(async result=>{
+    const idToken = await result.user.getIdToken();
+    const displayName = result.user.displayName || result.user.email.split('@')[0];
+    try{
+      if(window.opener){
+        window.opener.postMessage({type:'google-auth',idToken:idToken,displayName:displayName},'*');
+        setTimeout(()=>window.close(),500);
+      }
+    }catch(e){
+      document.querySelector('p').textContent='Giriş başarılı! Bu pencereyi kapatabilirsin.';
+    }
+  }).catch(e=>{
+    document.querySelector('p').textContent='Hata: '+e.message;
+    setTimeout(()=>{try{window.close()}catch(e){}},3000);
+  });
+}
+</script></body></html>`);
+});
+
 const JWT_SECRET = process.env.JWT_SECRET || 'xox-infinity-secret-change-in-production';
 const DB_FILE = path.join(__dirname, 'database.json');
 
@@ -1176,19 +1223,10 @@ io.on('connection', (socket) => {
     
     const eloField = gameMode === 'rapid' ? 'elo_rapid' : (gameMode === 'blitz' ? 'elo_blitz' : 'elo_normal');
     const playerModeElo = player[eloField] || player.elo || 1500;
-    const tolerance = 300;
-    
-    // Find closest ELO match in same game mode
-    let bestIdx = -1, bestDiff = Infinity;
-    waitingQueue.forEach((p, idx) => {
-      if (p.gameMode !== gameMode) return;
-      const diff = Math.abs(p.elo - playerModeElo);
-      if (diff <= tolerance && diff < bestDiff) {
-        bestDiff = diff;
-        bestIdx = idx;
-      }
-    });
-    const matchIdx = bestIdx;
+    const tolerance = 200;
+    const matchIdx = waitingQueue.findIndex(
+      p => Math.abs(p.elo - playerModeElo) <= tolerance && p.gameMode === gameMode
+    );
     
     if (matchIdx >= 0) {
       const opponent = waitingQueue.splice(matchIdx, 1)[0];
