@@ -169,7 +169,10 @@
       <div class="at" style="background:linear-gradient(135deg,#4cc9f0,#22b8e0);-webkit-background-clip:text;-webkit-text-fill-color:transparent" data-t="login_title">GİRİŞ YAP</div>
       <div class="as" data-t="login_sub">Tekrar hoş geldin!</div>
       <div id="login-error" class="er"></div>
-      <div id="google-btn-login" style="display:flex;justify-content:center;margin-bottom:8px"></div>
+      <button type="button" id="btn-google-login" style="width:100%;padding:14px;border:1px solid var(--bd);border-radius:14px;background:var(--s);color:var(--tx);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;">
+  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20">
+  <span data-t="google_login">Google ile Giriş Yap</span>
+</button>
       <div class="divider"><span data-t="or">veya</span></div>
       <div class="ig"><label class="il" data-t="email">E-posta / Kullanıcı Adı</label><input type="text" id="lu" class="inp" data-tp="ph_email" placeholder="ornek@email.com"></div>
       <div class="ig"><label class="il" data-t="password">Şifre</label><input type="password" id="lp" class="inp" data-tp="ph_pass" placeholder="min 6 karakter"></div>
@@ -472,44 +475,35 @@
     
     const isCapacitor = typeof window.Capacitor !== 'undefined';
     
-    function renderGoogleButton(){
-      const container = document.getElementById('google-btn-login');
-      if(!container) return;
-      
-      if(isCapacitor){
-        // Android: show custom button, open popup page
-        container.innerHTML=`<button onclick="openGooglePopup()" style="width:100%;padding:14px;border:1px solid var(--bd);border-radius:14px;background:var(--s);color:var(--tx);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"><span data-t="google_login">Google ile Giriş Yap</span></button>`;
-        return;
-      }
-      
-      // Web: use Google Identity Services
-      if(!FIREBASE_CONFIG.googleClientId) return;
-      if(typeof google === 'undefined' || !google.accounts || !google.accounts.id){
-        setTimeout(renderGoogleButton, 300);
-        return;
-      }
-      google.accounts.id.initialize({
-        client_id: FIREBASE_CONFIG.googleClientId,
-        callback: onGoogleCredential,
-        itp_support: true
-      });
-      google.accounts.id.renderButton(container, {
-        type: 'standard', theme: 'outline', size: 'large',
-        text: 'signin_with', shape: 'pill', width: 300
-      });
-    }
+    function renderGoogleButton() {
+  const container = document.getElementById('google-btn-login');
+  if (!container) return;
+
+  // Koşulsuz şartsız bu butonu ekrana bas!
+  container.innerHTML = `<button type="button" onclick="openGooglePopup()" style="width:100%;padding:14px;border:1px solid var(--bd);border-radius:14px;background:var(--s);color:var(--tx);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">
+    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20">
+    <span data-t="google_login">Google ile Giriş Yap</span>
+  </button>`;
+}
     
-    // Android: open Google auth in popup window
     async function openGooglePopup() {
-  try {
-    // 1. Yerel Android Pop-up'ını aç
+  try {alert("Buton tıklandı, fonksiyon çalışıyor!");
+    // 1. Eklenti var mı kontrol et ve Başlat (Initialize)
+    if (window.Capacitor && window.Capacitor.Plugins.GoogleAuth) {
+      await window.Capacitor.Plugins.GoogleAuth.initialize();
+    } else {
+      alert("Hata: GoogleAuth eklentisi telefonda bulunamadı!");
+      return;
+    }
+
+    // 2. Pop-up'ı aç
     const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
     
-    // 2. Google'dan gelen token'ı al
+    // Google'dan gelen veriler
     const idToken = googleUser.authentication.idToken;
     const displayName = googleUser.displayName || googleUser.email.split('@')[0];
 
-    // 3. Backend'e (Railway) gönder (Senin mevcut mantığınla aynı)
+    // 3. Backend'e gönder
     const r = await fetch('/api/auth/firebase', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -520,42 +514,25 @@
     if(d.success){
       localStorage.setItem('gl_token', d.token);
       U = d.user;
-      cS(); // Socket bağlantısını yeniler
+      cS(); 
       if(d.isNewUser){
         document.getElementById('unameDisplay').textContent = U.username;
         sS('username-screen');
       } else {
         sS('home-screen');
-        uH(); // Ana menüyü günceller
+        uH();
       }
     } else {
-      alert(d.error);
+      alert("Sunucu Hatası: " + d.error);
     }
   } catch (err) {
+    // BURASI ÖNEMLİ: Hata varsa artık ekranda göreceğiz
+    alert("Google Pop-up Açılamadı: " + JSON.stringify(err));
     console.error('Google Login Hatası:', err);
-    // Kullanıcı vazgeçerse veya hata olursa buraya düşer
   }
 }
     
-    // Listen for message from popup
-    window.addEventListener('message', async function(e){
-      if(!e.data || e.data.type !== 'google-auth') return;
-      const {idToken, displayName} = e.data;
-      try{
-        const r = await fetch('/api/auth/firebase', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({idToken, username: displayName, language: L})
-        });
-        const d = await r.json();
-        if(d.success){
-          localStorage.setItem('gl_token', d.token);U=d.user;cS();
-          if(d.isNewUser){document.getElementById('unameDisplay').textContent=U.username;sS('username-screen')}
-          else{sS('home-screen');uH()}
-        } else alert(d.error);
-      }catch(err){alert('Sunucu hatası: '+err.message)}
-    });
-    
+
     async function onGoogleCredential(response){
       if(!response || !response.credential){alert('Google credential boş döndü');return}
       try{
@@ -1248,11 +1225,17 @@
     function skipUsername(){cS();sS('home-screen');uH()}
 
     window.addEventListener('load', ()=>{
-      L=localStorage.getItem('gl_lang')||'tr'; uL();
-      renderGoogleButton();
-      const tk=localStorage.getItem('gl_token');
-      if(tk){cS();sS('home-screen')} else sS('auth-screen');
-    });
+  L=localStorage.getItem('gl_lang')||'tr'; uL();
+  
+  // İŞTE ÇÖZÜM: Butonu bul ve tıklamayı güvenli yoldan bağla!
+  const googleBtn = document.getElementById('btn-google-login');
+  if(googleBtn) {
+    googleBtn.addEventListener('click', openGooglePopup);
+  }
+
+  const tk=localStorage.getItem('gl_token');
+  if(tk){cS();sS('home-screen')} else sS('auth-screen');
+});
   </script>
 </body>
 </html>
