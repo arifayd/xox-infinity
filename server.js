@@ -91,30 +91,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Google OAuth popup page for Android WebView
 app.get('/auth/google-popup', (req, res) => {
-  // Read firebase-config.js and extract the config
-  let firebaseConfig = null;
+  // Read firebase config from file
+  let firebaseConfig = {};
   try {
-    const configPath = path.join(__dirname, 'public', 'firebase-config.js');
-    const configContent = require('fs').readFileSync(configPath, 'utf8');
-    const match = configContent.match(/apiKey\s*:\s*"([^"]+)"/);
-    const domainMatch = configContent.match(/authDomain\s*:\s*"([^"]+)"/);
-    const projectMatch = configContent.match(/projectId\s*:\s*"([^"]+)"/);
-    const storageMatch = configContent.match(/storageBucket\s*:\s*"([^"]+)"/);
-    const msgMatch = configContent.match(/messagingSenderId\s*:\s*"([^"]+)"/);
-    const appIdMatch = configContent.match(/appId\s*:\s*"([^"]+)"/);
-    if (match && domainMatch) {
-      firebaseConfig = {
-        apiKey: match[1],
-        authDomain: domainMatch[1],
-        projectId: projectMatch ? projectMatch[1] : '',
-        storageBucket: storageMatch ? storageMatch[1] : '',
-        messagingSenderId: msgMatch ? msgMatch[1] : '',
-        appId: appIdMatch ? appIdMatch[1] : ''
-      };
-    }
-  } catch(e) { console.error('Failed to read firebase config:', e); }
-
-  const cfgJSON = JSON.stringify(firebaseConfig || {});
+    const configContent = require('fs').readFileSync(path.join(__dirname, 'public', 'firebase-config.js'), 'utf8');
+    const m = (k) => { const r = configContent.match(new RegExp(k + '\\s*:\\s*"([^"]+)"')); return r ? r[1] : ''; };
+    firebaseConfig = { apiKey: m('apiKey'), authDomain: m('authDomain'), projectId: m('projectId'), storageBucket: m('storageBucket'), messagingSenderId: m('messagingSenderId'), appId: m('appId') };
+  } catch(e) {}
 
   res.send(`<!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -124,25 +107,33 @@ app.get('/auth/google-popup', (req, res) => {
 .box{text-align:center;padding:40px}.spin{border:4px solid #333;border-top:4px solid #4cc9f0;border-radius:50%;width:40px;height:40px;animation:s 1s linear infinite;margin:20px auto}@keyframes s{to{transform:rotate(360deg)}}</style>
 </head><body><div class="box"><div class="spin"></div><p id="msg">Google hesabina yonlendiriliyorsun...</p></div>
 <script>
-var cfg = ${cfgJSON};
-if(!cfg || !cfg.apiKey){
-  document.getElementById('msg').textContent='Firebase config bulunamadi';
-} else {
+var cfg = ${JSON.stringify(firebaseConfig)};
+if(!cfg.apiKey){document.getElementById('msg').textContent='Firebase config bulunamadi';}
+else{
   var app = firebase.initializeApp(cfg, 'gpopup');
   var auth = firebase.auth(app);
-  var provider = new firebase.auth.GoogleAuthProvider();
-  provider.setCustomParameters({prompt:'select_account'});
-  auth.signInWithPopup(provider).then(function(result){
-    return result.user.getIdToken().then(function(idToken){
-      var displayName = result.user.displayName || result.user.email.split('@')[0];
-      if(window.opener){
-        window.opener.postMessage({type:'google-auth',idToken:idToken,displayName:displayName},'*');
+  // First check if we're returning from redirect
+  auth.getRedirectResult().then(function(result){
+    if(result && result.user){
+      // We have the user from redirect - send token back
+      result.user.getIdToken().then(function(idToken){
+        var displayName = result.user.displayName || result.user.email.split('@')[0];
         document.getElementById('msg').textContent='Giris basarili! Oyuna donuluyor...';
-        setTimeout(function(){window.close()},800);
-      } else {
-        document.getElementById('msg').textContent='Giris basarili! Bu pencereyi kapatabilirsin.';
-      }
-    });
+        if(window.opener){
+          window.opener.postMessage({type:'google-auth',idToken:idToken,displayName:displayName},'*');
+          setTimeout(function(){window.close()},800);
+        } else {
+          // No opener - store in localStorage for parent to pick up
+          localStorage.setItem('google_auth_token',JSON.stringify({idToken:idToken,displayName:displayName}));
+          document.getElementById('msg').textContent='Giris basarili! Bu sekmeyi kapatip oyuna don.';
+        }
+      });
+    } else {
+      // No redirect result - initiate the redirect
+      var provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({prompt:'select_account'});
+      auth.signInWithRedirect(provider);
+    }
   }).catch(function(e){
     document.getElementById('msg').textContent='Hata: '+e.message;
   });

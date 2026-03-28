@@ -503,12 +503,20 @@
     function openGooglePopup(){
       const popup = window.open('/auth/google-popup', 'google_auth', 'width=500,height=600');
       if(!popup){alert('Popup engellenmiş. Lütfen popup izni ver.');return;}
+      // Fallback: poll localStorage in case postMessage doesn't work
+      const pollTimer = setInterval(function(){
+        const stored = localStorage.getItem('google_auth_token');
+        if(stored){
+          clearInterval(pollTimer);
+          localStorage.removeItem('google_auth_token');
+          try{const data=JSON.parse(stored);handleGoogleToken(data.idToken,data.displayName)}catch(e){}
+        }
+        // Stop polling if popup is closed
+        if(popup.closed) clearInterval(pollTimer);
+      }, 500);
     }
     
-    // Listen for message from popup
-    window.addEventListener('message', async function(e){
-      if(!e.data || e.data.type !== 'google-auth') return;
-      const {idToken, displayName} = e.data;
+    async function handleGoogleToken(idToken, displayName){
       try{
         const r = await fetch('/api/auth/firebase', {
           method: 'POST',
@@ -522,6 +530,12 @@
           else{sS('home-screen');uH()}
         } else alert(d.error);
       }catch(err){alert('Sunucu hatası: '+err.message)}
+    }
+    
+    // Listen for message from popup
+    window.addEventListener('message', async function(e){
+      if(!e.data || e.data.type !== 'google-auth') return;
+      handleGoogleToken(e.data.idToken, e.data.displayName);
     });
     
     async function onGoogleCredential(response){
