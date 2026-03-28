@@ -91,49 +91,63 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Google OAuth popup page for Android WebView
 app.get('/auth/google-popup', (req, res) => {
+  // Read firebase-config.js and extract the config
+  let firebaseConfig = null;
+  try {
+    const configPath = path.join(__dirname, 'public', 'firebase-config.js');
+    const configContent = require('fs').readFileSync(configPath, 'utf8');
+    const match = configContent.match(/apiKey\s*:\s*"([^"]+)"/);
+    const domainMatch = configContent.match(/authDomain\s*:\s*"([^"]+)"/);
+    const projectMatch = configContent.match(/projectId\s*:\s*"([^"]+)"/);
+    const storageMatch = configContent.match(/storageBucket\s*:\s*"([^"]+)"/);
+    const msgMatch = configContent.match(/messagingSenderId\s*:\s*"([^"]+)"/);
+    const appIdMatch = configContent.match(/appId\s*:\s*"([^"]+)"/);
+    if (match && domainMatch) {
+      firebaseConfig = {
+        apiKey: match[1],
+        authDomain: domainMatch[1],
+        projectId: projectMatch ? projectMatch[1] : '',
+        storageBucket: storageMatch ? storageMatch[1] : '',
+        messagingSenderId: msgMatch ? msgMatch[1] : '',
+        appId: appIdMatch ? appIdMatch[1] : ''
+      };
+    }
+  } catch(e) { console.error('Failed to read firebase config:', e); }
+
+  const cfgJSON = JSON.stringify(firebaseConfig || {});
+
   res.send(`<!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"><\/script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"><\/script>
 <style>body{background:#0a0a12;color:#f0f0f8;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
 .box{text-align:center;padding:40px}.spin{border:4px solid #333;border-top:4px solid #4cc9f0;border-radius:50%;width:40px;height:40px;animation:s 1s linear infinite;margin:20px auto}@keyframes s{to{transform:rotate(360deg)}}</style>
-</head><body><div class="box"><div class="spin"></div><p>Google hesabına yönlendiriliyorsun...</p></div>
+</head><body><div class="box"><div class="spin"></div><p id="msg">Google hesabina yonlendiriliyorsun...</p></div>
 <script>
-const fc = ${JSON.stringify({apiKey: process.env.FIREBASE_API_KEY || '', authDomain: process.env.FIREBASE_AUTH_DOMAIN || ''})};
-// Try to get config from opener
-let config = fc;
-try { if(window.opener && window.opener.FIREBASE_CONFIG) config = window.opener.FIREBASE_CONFIG; } catch(e){}
-// Fallback: fetch from firebase-config.js
-if(!config.apiKey){
-  fetch('/firebase-config.js').then(r=>r.text()).then(t=>{
-    try{eval(t); if(typeof FIREBASE_CONFIG!=='undefined') config=FIREBASE_CONFIG;} catch(e){}
-    startAuth();
-  }).catch(()=>startAuth());
-} else { startAuth(); }
-
-function startAuth(){
-  if(!config.apiKey){document.querySelector('p').textContent='Firebase yapılandırma hatası';return;}
-  const app = firebase.initializeApp(config, 'popup');
-  const auth = firebase.auth(app);
-  const provider = new firebase.auth.GoogleAuthProvider();
+var cfg = ${cfgJSON};
+if(!cfg || !cfg.apiKey){
+  document.getElementById('msg').textContent='Firebase config bulunamadi';
+} else {
+  var app = firebase.initializeApp(cfg, 'gpopup');
+  var auth = firebase.auth(app);
+  var provider = new firebase.auth.GoogleAuthProvider();
   provider.setCustomParameters({prompt:'select_account'});
-  auth.signInWithPopup(provider).then(async result=>{
-    const idToken = await result.user.getIdToken();
-    const displayName = result.user.displayName || result.user.email.split('@')[0];
-    try{
+  auth.signInWithPopup(provider).then(function(result){
+    return result.user.getIdToken().then(function(idToken){
+      var displayName = result.user.displayName || result.user.email.split('@')[0];
       if(window.opener){
         window.opener.postMessage({type:'google-auth',idToken:idToken,displayName:displayName},'*');
-        setTimeout(()=>window.close(),500);
+        document.getElementById('msg').textContent='Giris basarili! Oyuna donuluyor...';
+        setTimeout(function(){window.close()},800);
+      } else {
+        document.getElementById('msg').textContent='Giris basarili! Bu pencereyi kapatabilirsin.';
       }
-    }catch(e){
-      document.querySelector('p').textContent='Giriş başarılı! Bu pencereyi kapatabilirsin.';
-    }
-  }).catch(e=>{
-    document.querySelector('p').textContent='Hata: '+e.message;
-    setTimeout(()=>{try{window.close()}catch(e){}},3000);
+    });
+  }).catch(function(e){
+    document.getElementById('msg').textContent='Hata: '+e.message;
   });
 }
-</script></body></html>`);
+<\/script></body></html>`);
 });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'xox-infinity-secret-change-in-production';
