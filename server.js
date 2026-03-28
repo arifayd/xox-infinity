@@ -91,10 +91,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Google OAuth popup page for Android WebView
 app.get('/auth/google-popup', (req, res) => {
+  let googleClientId = '';
   let firebaseConfig = {};
   try {
     const configContent = require('fs').readFileSync(path.join(__dirname, 'public', 'firebase-config.js'), 'utf8');
     const m = (k) => { const r = configContent.match(new RegExp(k + '\\s*:\\s*"([^"]+)"')); return r ? r[1] : ''; };
+    googleClientId = m('googleClientId');
     firebaseConfig = { apiKey: m('apiKey'), authDomain: m('authDomain'), projectId: m('projectId'), storageBucket: m('storageBucket'), messagingSenderId: m('messagingSenderId'), appId: m('appId') };
   } catch(e) {}
 
@@ -106,42 +108,47 @@ app.get('/auth/google-popup', (req, res) => {
 .box{text-align:center;padding:40px}.spin{border:4px solid #333;border-top:4px solid #4cc9f0;border-radius:50%;width:40px;height:40px;animation:s 1s linear infinite;margin:20px auto}@keyframes s{to{transform:rotate(360deg)}}</style>
 </head><body><div class="box"><div class="spin"></div><p id="msg">Google hesabina yonlendiriliyorsun...</p></div>
 <script>
+var clientId = '${googleClientId}';
 var cfg = ${JSON.stringify(firebaseConfig)};
-if(!cfg.apiKey){document.getElementById('msg').textContent='Firebase config bulunamadi';}
-else{
-  var app = firebase.initializeApp(cfg, 'gpopup');
-  var auth = firebase.auth(app);
 
-  // Check if we already redirected (prevent infinite loop)
-  var didRedirect = sessionStorage.getItem('google_redirect_done');
-
-  if(didRedirect){
-    // We're back from redirect — get the result
-    sessionStorage.removeItem('google_redirect_done');
-    auth.getRedirectResult().then(function(result){
-      if(result && result.user){
-        result.user.getIdToken().then(function(idToken){
-          var displayName = result.user.displayName || result.user.email.split('@')[0];
-          document.getElementById('msg').textContent='Giris basarili! Oyuna donuluyor...';
-          // Send to opener via postMessage
-          try{ if(window.opener) window.opener.postMessage({type:'google-auth',idToken:idToken,displayName:displayName},'*'); }catch(e){}
-          // Also store in localStorage as fallback
-          localStorage.setItem('google_auth_token',JSON.stringify({idToken:idToken,displayName:displayName}));
-          setTimeout(function(){try{window.close()}catch(e){}},1000);
-        });
-      } else {
-        document.getElementById('msg').textContent='Giris iptal edildi. Pencereyi kapatabilirsin.';
-        setTimeout(function(){try{window.close()}catch(e){}},2000);
-      }
+// Check if we have access_token in URL hash (returning from Google)
+var hash = window.location.hash;
+if(hash && hash.indexOf('access_token') !== -1){
+  // Parse token from hash
+  var params = new URLSearchParams(hash.substring(1));
+  var accessToken = params.get('access_token');
+  if(accessToken && cfg.apiKey){
+    document.getElementById('msg').textContent='Giris yapiliyor...';
+    var app = firebase.initializeApp(cfg, 'gpopup');
+    var auth = firebase.auth(app);
+    var credential = firebase.auth.GoogleAuthProvider.credential(null, accessToken);
+    auth.signInWithCredential(credential).then(function(result){
+      return result.user.getIdToken().then(function(idToken){
+        var displayName = result.user.displayName || result.user.email.split('@')[0];
+        document.getElementById('msg').textContent='Giris basarili! Oyuna donuluyor...';
+        // Send token via localStorage (works across tabs in same origin)  
+        localStorage.setItem('google_auth_token', JSON.stringify({idToken:idToken, displayName:displayName}));
+        // Also try postMessage
+        try{ if(window.opener) window.opener.postMessage({type:'google-auth',idToken:idToken,displayName:displayName},'*'); }catch(e){}
+        setTimeout(function(){try{window.close()}catch(e){}},1000);
+      });
     }).catch(function(e){
       document.getElementById('msg').textContent='Hata: '+e.message;
     });
+  }
+} else {
+  // No token yet - redirect to Google OAuth
+  if(!clientId){
+    document.getElementById('msg').textContent='Google Client ID bulunamadi';
   } else {
-    // First visit — set flag and redirect to Google
-    sessionStorage.setItem('google_redirect_done','1');
-    var provider = new firebase.auth.GoogleAuthProvider();
-    provider.setCustomParameters({prompt:'select_account'});
-    auth.signInWithRedirect(provider);
+    var redirectUri = window.location.origin + '/auth/google-popup';
+    var url = 'https://accounts.google.com/o/oauth2/v2/auth'
+      + '?client_id=' + encodeURIComponent(clientId)
+      + '&redirect_uri=' + encodeURIComponent(redirectUri)
+      + '&response_type=token'
+      + '&scope=email%20profile'
+      + '&prompt=select_account';
+    window.location.href = url;
   }
 }
 <\/script></body></html>`);
