@@ -63,7 +63,22 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: true }));
 const io = new Server(server, {
   cors: { 
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: function(origin, callback) {
+      // Allow: no origin (mobile apps), capacitor, localhost, Railway
+      const allowed = [
+        'http://localhost:3000',
+        'http://localhost',
+        'https://localhost',
+        'capacitor://localhost',
+        'ionic://localhost',
+        'https://xox-infinity-production.up.railway.app'
+      ];
+      if (!origin || allowed.includes(origin) || (process.env.CORS_ORIGIN && origin === process.env.CORS_ORIGIN)) {
+        callback(null, true);
+      } else {
+        callback(null, true); // geliştirme aşamasında hepsine izin ver
+      }
+    },
     methods: ['GET', 'POST'],
     credentials: true
   },
