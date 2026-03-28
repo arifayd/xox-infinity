@@ -91,7 +91,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Google OAuth popup page for Android WebView
 app.get('/auth/google-popup', (req, res) => {
-  // Read firebase config from file
   let firebaseConfig = {};
   try {
     const configContent = require('fs').readFileSync(path.join(__dirname, 'public', 'firebase-config.js'), 'utf8');
@@ -112,31 +111,38 @@ if(!cfg.apiKey){document.getElementById('msg').textContent='Firebase config bulu
 else{
   var app = firebase.initializeApp(cfg, 'gpopup');
   var auth = firebase.auth(app);
-  // First check if we're returning from redirect
-  auth.getRedirectResult().then(function(result){
-    if(result && result.user){
-      // We have the user from redirect - send token back
-      result.user.getIdToken().then(function(idToken){
-        var displayName = result.user.displayName || result.user.email.split('@')[0];
-        document.getElementById('msg').textContent='Giris basarili! Oyuna donuluyor...';
-        if(window.opener){
-          window.opener.postMessage({type:'google-auth',idToken:idToken,displayName:displayName},'*');
-          setTimeout(function(){window.close()},800);
-        } else {
-          // No opener - store in localStorage for parent to pick up
+
+  // Check if we already redirected (prevent infinite loop)
+  var didRedirect = sessionStorage.getItem('google_redirect_done');
+
+  if(didRedirect){
+    // We're back from redirect — get the result
+    sessionStorage.removeItem('google_redirect_done');
+    auth.getRedirectResult().then(function(result){
+      if(result && result.user){
+        result.user.getIdToken().then(function(idToken){
+          var displayName = result.user.displayName || result.user.email.split('@')[0];
+          document.getElementById('msg').textContent='Giris basarili! Oyuna donuluyor...';
+          // Send to opener via postMessage
+          try{ if(window.opener) window.opener.postMessage({type:'google-auth',idToken:idToken,displayName:displayName},'*'); }catch(e){}
+          // Also store in localStorage as fallback
           localStorage.setItem('google_auth_token',JSON.stringify({idToken:idToken,displayName:displayName}));
-          document.getElementById('msg').textContent='Giris basarili! Bu sekmeyi kapatip oyuna don.';
-        }
-      });
-    } else {
-      // No redirect result - initiate the redirect
-      var provider = new firebase.auth.GoogleAuthProvider();
-      provider.setCustomParameters({prompt:'select_account'});
-      auth.signInWithRedirect(provider);
-    }
-  }).catch(function(e){
-    document.getElementById('msg').textContent='Hata: '+e.message;
-  });
+          setTimeout(function(){try{window.close()}catch(e){}},1000);
+        });
+      } else {
+        document.getElementById('msg').textContent='Giris iptal edildi. Pencereyi kapatabilirsin.';
+        setTimeout(function(){try{window.close()}catch(e){}},2000);
+      }
+    }).catch(function(e){
+      document.getElementById('msg').textContent='Hata: '+e.message;
+    });
+  } else {
+    // First visit — set flag and redirect to Google
+    sessionStorage.setItem('google_redirect_done','1');
+    var provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({prompt:'select_account'});
+    auth.signInWithRedirect(provider);
+  }
 }
 <\/script></body></html>`);
 });
