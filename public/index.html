@@ -472,37 +472,13 @@
     
     const isCapacitor = typeof window.Capacitor !== 'undefined';
     
-    // Check if returning from Google OAuth (URL has google_token param)
-    (function checkGoogleReturn(){
-      const params = new URLSearchParams(window.location.search);
-      const gToken = params.get('google_token');
-      if(gToken){
-        // Clean URL
-        history.replaceState(null, '', '/');
-        const isNew = params.get('isNew') === '1';
-        const username = params.get('username') || '';
-        localStorage.setItem('gl_token', gToken);
-        // Wait for socket and page to load
-        setTimeout(function(){
-          cS();
-          if(isNew){
-            document.getElementById('unameDisplay').textContent = username;
-            sS('username-screen');
-          } else {
-            sS('home-screen');
-            uH();
-          }
-        }, 500);
-      }
-    })();
-
     function renderGoogleButton(){
       const container = document.getElementById('google-btn-login');
       if(!container) return;
       
       if(isCapacitor){
-        // Android: direct redirect to Google OAuth (no popup)
-        container.innerHTML=`<button onclick="googleSignInDirect()" style="width:100%;padding:14px;border:1px solid var(--bd);border-radius:14px;background:var(--s);color:var(--tx);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"><span data-t="google_login">Google ile Giriş Yap</span></button>`;
+        // Android: native Google Sign-In via Capacitor plugin
+        container.innerHTML=`<button onclick="nativeGoogleSignIn()" style="width:100%;padding:14px;border:1px solid var(--bd);border-radius:14px;background:var(--s);color:var(--tx);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"><span data-t="google_login">Google ile Giriş Yap</span></button>`;
         return;
       }
       
@@ -523,17 +499,40 @@
       });
     }
     
-    // Android: redirect to Google OAuth directly in same WebView
-    function googleSignInDirect(){
-      if(!FIREBASE_CONFIG.googleClientId){alert('Google Client ID bulunamadı');return;}
-      var redirectUri = window.location.origin + '/auth/google-callback';
-      var url = 'https://accounts.google.com/o/oauth2/v2/auth'
-        + '?client_id=' + encodeURIComponent(FIREBASE_CONFIG.googleClientId)
-        + '&redirect_uri=' + encodeURIComponent(redirectUri)
-        + '&response_type=token'
-        + '&scope=email%20profile'
-        + '&prompt=select_account';
-      window.location.href = url;
+    // Android: native Google Sign-In
+    async function nativeGoogleSignIn(){
+      try{
+        // Import the plugin
+        const GoogleAuth = window.Capacitor.Plugins.GoogleAuth;
+        if(!GoogleAuth){alert('GoogleAuth plugin bulunamadı');return;}
+        
+        const result = await GoogleAuth.signIn();
+        // result contains: idToken, authentication.idToken, email, name, etc.
+        const idToken = result.authentication.idToken;
+        const displayName = result.name || result.email.split('@')[0];
+        
+        if(!idToken){alert('Google token alınamadı');return;}
+        
+        // Send to Firebase via our server
+        const cred = firebase.auth.GoogleAuthProvider.credential(idToken);
+        const fbResult = await fbAuth.signInWithCredential(cred);
+        const firebaseToken = await fbResult.user.getIdToken();
+        
+        const r = await fetch('/api/auth/firebase', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({idToken: firebaseToken, username: displayName, language: L})
+        });
+        const d = await r.json();
+        if(d.success){
+          localStorage.setItem('gl_token', d.token);U=d.user;cS();
+          if(d.isNewUser){document.getElementById('unameDisplay').textContent=U.username;sS('username-screen')}
+          else{sS('home-screen');uH()}
+        } else alert(d.error);
+      }catch(e){
+        console.error('Google sign in error:', e);
+        alert('Google giriş hatası: '+(e.message||JSON.stringify(e)));
+      }
     }
     
     async function onGoogleCredential(response){
