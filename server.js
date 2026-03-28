@@ -89,14 +89,14 @@ app.use('/api/auth/', authLimiter);
 app.use('/api/', apiLimiter);
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Google OAuth popup page for Android WebView
-app.get('/auth/google-popup', (req, res) => {
-  let googleClientId = '';
+// Google OAuth callback - handles the token from Google
+app.get('/auth/google-callback', async (req, res) => {
+  // This page receives the access_token in the URL hash
+  // Since hash is client-side only, we need a small page to extract and send it
   let firebaseConfig = {};
   try {
     const configContent = require('fs').readFileSync(path.join(__dirname, 'public', 'firebase-config.js'), 'utf8');
     const m = (k) => { const r = configContent.match(new RegExp(k + '\\s*:\\s*"([^"]+)"')); return r ? r[1] : ''; };
-    googleClientId = m('googleClientId');
     firebaseConfig = { apiKey: m('apiKey'), authDomain: m('authDomain'), projectId: m('projectId'), storageBucket: m('storageBucket'), messagingSenderId: m('messagingSenderId'), appId: m('appId') };
   } catch(e) {}
 
@@ -106,50 +106,42 @@ app.get('/auth/google-popup', (req, res) => {
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"><\/script>
 <style>body{background:#0a0a12;color:#f0f0f8;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
 .box{text-align:center;padding:40px}.spin{border:4px solid #333;border-top:4px solid #4cc9f0;border-radius:50%;width:40px;height:40px;animation:s 1s linear infinite;margin:20px auto}@keyframes s{to{transform:rotate(360deg)}}</style>
-</head><body><div class="box"><div class="spin"></div><p id="msg">Google hesabina yonlendiriliyorsun...</p></div>
+</head><body><div class="box"><div class="spin"></div><p id="msg">Giris yapiliyor...</p></div>
 <script>
-var clientId = '${googleClientId}';
 var cfg = ${JSON.stringify(firebaseConfig)};
-
-// Check if we have access_token in URL hash (returning from Google)
 var hash = window.location.hash;
 if(hash && hash.indexOf('access_token') !== -1){
-  // Parse token from hash
   var params = new URLSearchParams(hash.substring(1));
   var accessToken = params.get('access_token');
   if(accessToken && cfg.apiKey){
-    document.getElementById('msg').textContent='Giris yapiliyor...';
-    var app = firebase.initializeApp(cfg, 'gpopup');
+    var app = firebase.initializeApp(cfg, 'gcb');
     var auth = firebase.auth(app);
     var credential = firebase.auth.GoogleAuthProvider.credential(null, accessToken);
     auth.signInWithCredential(credential).then(function(result){
       return result.user.getIdToken().then(function(idToken){
         var displayName = result.user.displayName || result.user.email.split('@')[0];
-        document.getElementById('msg').textContent='Giris basarili! Oyuna donuluyor...';
-        // Send token via localStorage (works across tabs in same origin)  
-        localStorage.setItem('google_auth_token', JSON.stringify({idToken:idToken, displayName:displayName}));
-        // Also try postMessage
-        try{ if(window.opener) window.opener.postMessage({type:'google-auth',idToken:idToken,displayName:displayName},'*'); }catch(e){}
-        setTimeout(function(){try{window.close()}catch(e){}},1000);
+        // Send to our server to get game token
+        return fetch('/api/auth/firebase',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({idToken:idToken,username:displayName,language:'tr'})
+        }).then(function(r){return r.json()}).then(function(d){
+          if(d.success){
+            // Redirect back to app with game token in hash
+            window.location.href='/?google_token='+encodeURIComponent(d.token)+'&isNew='+(d.isNewUser?'1':'0')+'&username='+encodeURIComponent(d.user.username);
+          } else {
+            document.getElementById('msg').textContent='Hata: '+(d.error||'Sunucu hatasi');
+          }
+        });
       });
     }).catch(function(e){
       document.getElementById('msg').textContent='Hata: '+e.message;
     });
+  } else {
+    document.getElementById('msg').textContent='Token alinamadi';
   }
 } else {
-  // No token yet - redirect to Google OAuth
-  if(!clientId){
-    document.getElementById('msg').textContent='Google Client ID bulunamadi';
-  } else {
-    var redirectUri = window.location.origin + '/auth/google-popup';
-    var url = 'https://accounts.google.com/o/oauth2/v2/auth'
-      + '?client_id=' + encodeURIComponent(clientId)
-      + '&redirect_uri=' + encodeURIComponent(redirectUri)
-      + '&response_type=token'
-      + '&scope=email%20profile'
-      + '&prompt=select_account';
-    window.location.href = url;
-  }
+  document.getElementById('msg').textContent='Google giris basarisiz';
 }
 <\/script></body></html>`);
 });
