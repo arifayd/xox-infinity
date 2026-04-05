@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">XOX Arena</string>
-    <string name="title_activity_main">XOX Arena</string>
+    <string name="app_name">XOX Infinity Arena</string>
+    <string name="title_activity_main">XOX Infinity Arena</string>
     <string name="package_name">com.xoxarena.app</string>
     <string name="custom_url_scheme">com.xoxarena.app</string>
     <string name="server_client_id">274803484143-8vr4gfje3volompe4jg43gbaglh4r7i4.apps.googleusercontent.com</string>

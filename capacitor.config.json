@@ -1,6 +1,6 @@
 {
   "appId": "com.xoxarena.app",
-  "appName": "XOX Arena",
+  "appName": "XOX Infinity Arena",
   "webDir": "public",
   "android": {
     "allowMixedContent": true

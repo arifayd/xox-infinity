@@ -63,22 +63,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: true }));
 const io = new Server(server, {
   cors: { 
-    origin: function(origin, callback) {
-      // Allow: no origin (mobile apps), capacitor, localhost, Railway
-      const allowed = [
-        'http://localhost:3000',
-        'http://localhost',
-        'https://localhost',
-        'capacitor://localhost',
-        'ionic://localhost',
-        'https://xox-infinity-production.up.railway.app'
-      ];
-      if (!origin || allowed.includes(origin) || (process.env.CORS_ORIGIN && origin === process.env.CORS_ORIGIN)) {
-        callback(null, true);
-      } else {
-        callback(null, true); // geliştirme aşamasında hepsine izin ver
-      }
-    },
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
     methods: ['GET', 'POST'],
     credentials: true
   },
@@ -104,61 +89,51 @@ app.use('/api/auth/', authLimiter);
 app.use('/api/', apiLimiter);
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Google OAuth callback - handles the token from Google
-app.get('/auth/google-callback', async (req, res) => {
-  // This page receives the access_token in the URL hash
-  // Since hash is client-side only, we need a small page to extract and send it
-  let firebaseConfig = {};
-  try {
-    const configContent = require('fs').readFileSync(path.join(__dirname, 'public', 'firebase-config.js'), 'utf8');
-    const m = (k) => { const r = configContent.match(new RegExp(k + '\\s*:\\s*"([^"]+)"')); return r ? r[1] : ''; };
-    firebaseConfig = { apiKey: m('apiKey'), authDomain: m('authDomain'), projectId: m('projectId'), storageBucket: m('storageBucket'), messagingSenderId: m('messagingSenderId'), appId: m('appId') };
-  } catch(e) {}
-
+// Google OAuth popup page for Android WebView
+app.get('/auth/google-popup', (req, res) => {
   res.send(`<!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"><\/script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"><\/script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <style>body{background:#0a0a12;color:#f0f0f8;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
 .box{text-align:center;padding:40px}.spin{border:4px solid #333;border-top:4px solid #4cc9f0;border-radius:50%;width:40px;height:40px;animation:s 1s linear infinite;margin:20px auto}@keyframes s{to{transform:rotate(360deg)}}</style>
-</head><body><div class="box"><div class="spin"></div><p id="msg">Giris yapiliyor...</p></div>
+</head><body><div class="box"><div class="spin"></div><p>Google hesabına yönlendiriliyorsun...</p></div>
 <script>
-var cfg = ${JSON.stringify(firebaseConfig)};
-var hash = window.location.hash;
-if(hash && hash.indexOf('access_token') !== -1){
-  var params = new URLSearchParams(hash.substring(1));
-  var accessToken = params.get('access_token');
-  if(accessToken && cfg.apiKey){
-    var app = firebase.initializeApp(cfg, 'gcb');
-    var auth = firebase.auth(app);
-    var credential = firebase.auth.GoogleAuthProvider.credential(null, accessToken);
-    auth.signInWithCredential(credential).then(function(result){
-      return result.user.getIdToken().then(function(idToken){
-        var displayName = result.user.displayName || result.user.email.split('@')[0];
-        // Send to our server to get game token
-        return fetch('/api/auth/firebase',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({idToken:idToken,username:displayName,language:'tr'})
-        }).then(function(r){return r.json()}).then(function(d){
-          if(d.success){
-            // Redirect back to app with game token in hash
-            window.location.href='/?google_token='+encodeURIComponent(d.token)+'&isNew='+(d.isNewUser?'1':'0')+'&username='+encodeURIComponent(d.user.username);
-          } else {
-            document.getElementById('msg').textContent='Hata: '+(d.error||'Sunucu hatasi');
-          }
-        });
-      });
-    }).catch(function(e){
-      document.getElementById('msg').textContent='Hata: '+e.message;
-    });
-  } else {
-    document.getElementById('msg').textContent='Token alinamadi';
-  }
-} else {
-  document.getElementById('msg').textContent='Google giris basarisiz';
+const fc = ${JSON.stringify({apiKey: process.env.FIREBASE_API_KEY || '', authDomain: process.env.FIREBASE_AUTH_DOMAIN || ''})};
+// Try to get config from opener
+let config = fc;
+try { if(window.opener && window.opener.FIREBASE_CONFIG) config = window.opener.FIREBASE_CONFIG; } catch(e){}
+// Fallback: fetch from firebase-config.js
+if(!config.apiKey){
+  fetch('/firebase-config.js').then(r=>r.text()).then(t=>{
+    try{eval(t); if(typeof FIREBASE_CONFIG!=='undefined') config=FIREBASE_CONFIG;} catch(e){}
+    startAuth();
+  }).catch(()=>startAuth());
+} else { startAuth(); }
+
+function startAuth(){
+  if(!config.apiKey){document.querySelector('p').textContent='Firebase yapılandırma hatası';return;}
+  const app = firebase.initializeApp(config, 'popup');
+  const auth = firebase.auth(app);
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({prompt:'select_account'});
+  auth.signInWithPopup(provider).then(async result=>{
+    const idToken = await result.user.getIdToken();
+    const displayName = result.user.displayName || result.user.email.split('@')[0];
+    try{
+      if(window.opener){
+        window.opener.postMessage({type:'google-auth',idToken:idToken,displayName:displayName},'*');
+        setTimeout(()=>window.close(),500);
+      }
+    }catch(e){
+      document.querySelector('p').textContent='Giriş başarılı! Bu pencereyi kapatabilirsin.';
+    }
+  }).catch(e=>{
+    document.querySelector('p').textContent='Hata: '+e.message;
+    setTimeout(()=>{try{window.close()}catch(e){}},3000);
+  });
 }
-<\/script></body></html>`);
+</script></body></html>`);
 });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'xox-infinity-secret-change-in-production';
@@ -1001,7 +976,7 @@ function checkWinner(board) {
   return null;
 }
 
-function createRoom(p1Socket, p2Socket, gameMode = 'normal') {
+function createRoom(p1Socket, p2Socket, gameMode = 'normal', isFriendly = false) {
   const roomId = Math.random().toString(36).substr(2, 8).toUpperCase();
   const p1 = players[p1Socket.id];
   const p2 = players[p2Socket.id];
@@ -1039,6 +1014,7 @@ function createRoom(p1Socket, p2Socket, gameMode = 'normal') {
     startTime: Date.now(),
     rematchRequests: new Set(),
     gameEnded: false,
+    isFriendly: isFriendly,
   };
   
   p1.roomId = roomId;
@@ -1123,9 +1099,11 @@ async function endRoom(roomId, winnerSymbol, reason) {
   const duration = Math.floor((Date.now() - room.startTime) / 1000);
   
   if (winner && loser) {
-    const eloChange = calculateEloChange(winner.elo, loser.elo, reason === 'draw');
+    const isFriendly = room.isFriendly || false;
+    const eloChange = isFriendly ? {winner: 0, loser: 0} : calculateEloChange(winner.elo, loser.elo, reason === 'draw');
     const eloField = room.gameMode === 'rapid' ? 'elo_rapid' : (room.gameMode === 'blitz' ? 'elo_blitz' : 'elo_normal');
     
+    if (!isFriendly) {
     if (usePostgreSQL) {
       await pgPool.query(
         `UPDATE users SET ${eloField} = ${eloField} + $1, wins = wins + 1, trophies = trophies + 30 WHERE id = $2`,
@@ -1173,6 +1151,7 @@ async function endRoom(roomId, winnerSymbol, reason) {
       db.matches.push(match);
       saveJSONDB();
     }
+    } // end if(!isFriendly)
     
     io.to(roomId).emit('game_ended', {
       roomId,
@@ -1374,7 +1353,7 @@ io.on('connection', (socket) => {
     
     if (!fromSocket || !toSocket) return;
     
-    const room = createRoom(fromSocket, toSocket, challenge.gameMode);
+    const room = createRoom(fromSocket, toSocket, challenge.gameMode, true);
     
     io.to(room.id).emit('match_found', {
       roomId: room.id,
