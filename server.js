@@ -1531,6 +1531,7 @@ function startRematch(roomId) {
   rooms[newRoomId] = {
     id: newRoomId,
     gameMode: oldRoom.gameMode,
+    isFriendly: oldRoom.isFriendly || false,
     players: [
       { socketId: p1Socket.id, userId: p1.userId, username: p1.username, elo: p1.elo, symbol: p1NewSymbol },
       { socketId: p2Socket.id, userId: p2.userId, username: p2.username, elo: p2.elo, symbol: p2NewSymbol },
