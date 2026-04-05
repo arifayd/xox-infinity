@@ -1160,7 +1160,8 @@ async function endRoom(roomId, winnerSymbol, reason) {
       loser: loser.username,
       reason,
       eloChange,
-      duration
+      duration,
+      isFriendly: isFriendly,
     });
   }
   

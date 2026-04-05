@@ -173,6 +173,7 @@
       <div class="divider"><span data-t="or">veya</span></div>
       <div class="ig"><label class="il" data-t="email">E-posta / Kullanıcı Adı</label><input type="text" id="lu" class="inp" data-tp="ph_email" placeholder="ornek@email.com"></div>
       <div class="ig"><label class="il" data-t="password">Şifre</label><input type="password" id="lp" class="inp" data-tp="ph_pass" placeholder="min 6 karakter"></div>
+      <div style="text-align:right;margin:-4px 0 8px"><button onclick="forgotPassword()" style="background:none;border:none;color:var(--ac2);font-size:13px;font-family:'Nunito',sans-serif;cursor:pointer;font-weight:600" data-t="forgot_pass">Şifremi Unuttum</button></div>
       <button class="btn bp" onclick="login()" data-t="login_btn">Giriş Yap</button>
     </div>
     <div class="ac" id="rf" style="display:none;border-top:2px solid var(--ac)">
@@ -405,6 +406,18 @@
 
     function sTab(tab){document.getElementById('lf').style.display=tab==='login'?'block':'none';document.getElementById('rf').style.display=tab==='register'?'block':'none';document.getElementById('tl').className='tab'+(tab==='login'?' al':'');document.getElementById('tr').className='tab'+(tab==='register'?' ar':'')}
     
+    async function forgotPassword(){
+      const em=document.getElementById('lu').value;
+      if(!em||!em.includes('@')){sE('login-error','Lütfen e-posta adresinizi girin');return}
+      if(!useFirebase){sE('login-error','Şifre sıfırlama sadece e-posta ile kayıtlı hesaplarda çalışır');return}
+      try{
+        await fbAuth.sendPasswordResetEmail(em);
+        sE('login-error','');
+        document.getElementById('login-error').style.color='#4cc9f0';
+        document.getElementById('login-error').textContent='Şifre sıfırlama maili gönderildi! E-postanı kontrol et.';
+      }catch(e){sE('login-error',e.message.includes('user-not-found')?'Bu e-posta ile kayıtlı hesap bulunamadı':e.message)}
+    }
+
     async function login(){
       const em=document.getElementById('lu').value,p=document.getElementById('lp').value;
       if(!em||!p){sE('login-error',t('email')+' & '+t('password'));return}
@@ -634,11 +647,13 @@
         if(d.winner===U.username){
           sfxWin();
           const ec=d.eloChange?d.eloChange.winner:0;
-          U.wins=(U.wins||0)+1;U.trophies=(U.trophies||0)+30;checkNewAchievements();showRes('WIN',ec,true);
+          if(!d.isFriendly){U.wins=(U.wins||0)+1;U.trophies=(U.trophies||0)+30;checkNewAchievements();}
+          showRes('WIN',ec,true);
         }else{
           sfxLose();
           const ec=d.eloChange?d.eloChange.loser:0;
-          U.losses=(U.losses||0)+1;U.trophies=Math.max(0,(U.trophies||0)-18);checkNewAchievements();showRes('LOSS',ec,true);
+          if(!d.isFriendly){U.losses=(U.losses||0)+1;U.trophies=Math.max(0,(U.trophies||0)-18);checkNewAchievements();}
+          showRes('LOSS',ec,true);
         }
       }, 2000);
     });
