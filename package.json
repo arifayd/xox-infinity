@@ -13,11 +13,6 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "@capacitor/android": "^8.2.0",
-    "@capacitor/browser": "^8.0.3",
-    "@capacitor/cli": "^8.2.0",
-    "@capacitor/core": "^8.2.0",
-    "@codetrix-studio/capacitor-google-auth": "^3.4.0-rc.4",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
@@ -32,6 +27,11 @@
     "validator": "^13.11.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/browser": "^8.0.3",
+    "@capacitor/cli": "^8.2.0",
+    "@capacitor/core": "^8.2.0",
+    "@codetrix-studio/capacitor-google-auth": "^3.4.0-rc.4",
     "jest": "^29.7.0",
     "nodemon": "^3.0.2",
     "supertest": "^6.3.3"
