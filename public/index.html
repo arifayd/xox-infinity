@@ -175,6 +175,7 @@
       <div class="ig"><label class="il" data-t="password">Şifre</label><input type="password" id="lp" class="inp" data-tp="ph_pass" placeholder="min 6 karakter"></div>
       <div style="text-align:right;margin:-4px 0 8px"><button onclick="forgotPassword()" style="background:none;border:none;color:var(--ac2);font-size:13px;font-family:'Nunito',sans-serif;cursor:pointer;font-weight:600" data-t="forgot_pass">Şifremi Unuttum</button></div>
       <button class="btn bp" onclick="login()" data-t="login_btn">Giriş Yap</button>
+      <div style="margin-top:16px;text-align:center"><div class="divider" style="margin-bottom:12px"><span>veya</span></div><button onclick="guestLogin()" style="width:100%;padding:14px;border:1px solid rgba(255,215,0,.3);border-radius:14px;background:linear-gradient(135deg,#1a1a10,#2a2a18);color:var(--gold);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer">👤 Misafir Olarak Oyna</button></div>
     </div>
     <div class="ac" id="rf" style="display:none;border-top:2px solid var(--ac)">
       <div class="at" style="background:linear-gradient(135deg,#ff4d6d,#e0225a);-webkit-background-clip:text;-webkit-text-fill-color:transparent" data-t="register_title">KAYIT OL</div>
@@ -453,6 +454,15 @@
       }
     }
     
+    async function guestLogin(){
+      try{
+        const r=await fetch('/api/auth/guest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({language:L})});
+        const d=await r.json();
+        if(d.success){localStorage.setItem('gl_token',d.token);U=d.user;cS();sS('home-screen');uH()}
+        else sE('login-error',d.error||'Misafir giriş başarısız');
+      }catch(e){sE('login-error','Bağlantı hatası')}
+    }
+
     async function register(){
       const em=document.getElementById('rem').value,p=document.getElementById('rp').value;
       if(!em||!p){sE('register-error',t('email')+' & '+t('password'));return}
@@ -769,7 +779,7 @@
       if(g.diff==='easy')return Math.random()<.10?gBM(g):e[Math.floor(Math.random()*e.length)];
       if(g.diff==='medium')return Math.random()<.50?gBM(g):e[Math.floor(Math.random()*e.length)];
       if(g.diff==='hard')return Math.random()<.85?gBM(g):e[Math.floor(Math.random()*e.length)];
-      return Math.random()<.99?gBM(g):e[Math.floor(Math.random()*e.length)]}
+      return gBM(g)}
 
     function gBM(g){const b=[...g.board];let bs=-Infinity,bm=-1;for(let i=0;i<9;i++){if(b[i]!==null)continue;b[i]=g.aSym;const s=mm(b,0,false,g.aSym,g.pSym);b[i]=null;if(s>bs){bs=s;bm=i}}return bm!==-1?bm:g.board.indexOf(null)}
     function mm(b,d,x,a,p){const w=cW(b);if(w){if(w.winner===a)return 10-d;if(w.winner===p)return d-10;}if(!b.includes(null)||d>6)return 0;if(x){let best=-Infinity;for(let i=0;i<9;i++){if(b[i]!==null)continue;b[i]=a;best=Math.max(best,mm(b,d+1,false,a,p));b[i]=null}return best}else{let best=Infinity;for(let i=0;i<9;i++){if(b[i]!==null)continue;b[i]=p;best=Math.min(best,mm(b,d+1,true,a,p));b[i]=null}return best}}

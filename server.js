@@ -553,7 +553,7 @@ app.post('/api/auth/guest', (req, res) => {
     const username = `Misafir_${guestNum}`;
 
     const guestUser = {
-      id: null,
+      id: usePostgreSQL ? null : (db.users.length + 1),
       username,
       isGuest: true,
       trophies: 0,
@@ -562,16 +562,24 @@ app.post('/api/auth/guest', (req, res) => {
       language: language || 'tr',
       avatar: '👤',
       clan_id: null,
-      is_admin: false, is_banned: false
+      is_admin: false, is_banned: false,
+      created_at: new Date().toISOString()
     };
 
+    if (usePostgreSQL) {
+      // PostgreSQL insert would go here
+    } else {
+      db.users.push(guestUser);
+      saveJSONDB();
+    }
+
     const token = jwt.sign(
-      { isGuest: true, username, userId: null },
+      { isGuest: true, username, userId: guestUser.id },
       JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '30d' }
     );
 
-    console.log(`[GUEST] ${username}`);
+    console.log(`[GUEST] ${username} (id: ${guestUser.id})`);
     res.json({ success: true, token, user: guestUser, isGuest: true });
   } catch (error) {
     console.error('Guest login error:', error);
