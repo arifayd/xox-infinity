@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -152,7 +152,7 @@
   <div class="ach-toast" id="ach-toast"><div class="ach-toast-icon" id="ach-toast-icon">🎯</div><div class="ach-toast-text"><div class="ach-toast-title" id="ach-toast-title">Başarım Kazanıldı!</div><div class="ach-toast-desc" id="ach-toast-desc">İlk Galibiyet</div></div></div>
   <div class="lt" onclick="toggleLD()">🌐</div>
   <div class="ld" id="ld">
-    <button class="lb active" onclick="cL('tr')">🇹🇷</button><button class="lb" onclick="cL('en')">🇬🇧</button><button class="lb" onclick="cL('es')">🇪🇸</button><button class="lb" onclick="cL('fr')">🇫🇷</button><button class="lb" onclick="cL('de')">🇩🇪</button><button class="lb" onclick="cL('it')">🇮🇹</button><button class="lb" onclick="cL('pt')">🇵🇹</button><button class="lb" onclick="cL('ru')">🇷🇺</button><button class="lb" onclick="cL('ar')">🇸🇦</button><button class="lb" onclick="cL('ja')">🇯🇵</button><button class="lb" onclick="cL('ko')">🇰🇷</button><button class="lb" onclick="cL('zh')">🇨🇳</button><button class="lb" onclick="cL('vi')">🇻🇳</button><button class="lb" onclick="cL('th')">🇹🇭</button>
+    <button class="lb" onclick="cL('tr')">🇹🇷</button><button class="lb active" onclick="cL('en')">🇬🇧</button><button class="lb" onclick="cL('es')">🇪🇸</button><button class="lb" onclick="cL('fr')">🇫🇷</button><button class="lb" onclick="cL('de')">🇩🇪</button><button class="lb" onclick="cL('it')">🇮🇹</button><button class="lb" onclick="cL('pt')">🇵🇹</button><button class="lb" onclick="cL('ru')">🇷🇺</button><button class="lb" onclick="cL('ar')">🇸🇦</button><button class="lb" onclick="cL('ja')">🇯🇵</button><button class="lb" onclick="cL('ko')">🇰🇷</button><button class="lb" onclick="cL('zh')">🇨🇳</button><button class="lb" onclick="cL('vi')">🇻🇳</button><button class="lb" onclick="cL('th')">🇹🇭</button>
   </div>
 
   <!-- AUTH -->
@@ -344,7 +344,7 @@
     function sfxWin(){playTone(523,.15,'sine',.15);setTimeout(()=>playTone(659,.15,'sine',.15),120);setTimeout(()=>playTone(784,.25,'sine',.18),240);setTimeout(()=>playTone(1047,.35,'sine',.12),400)}
     function sfxLose(){playTone(400,.2,'sawtooth',.1);setTimeout(()=>playTone(300,.2,'sawtooth',.1),200);setTimeout(()=>playTone(200,.4,'sawtooth',.08),400)}
 
-    const S=io();let U=null,L='tr',GR=null,AI=null,LM='normal',PCI=null,RMT=null,RC=10;
+    const S=io();let U=null,L='en',GR=null,AI=null,LM='normal',PCI=null,RMT=null,RC=10;
     let GS={board:Array(9).fill(null),currentPlayer:'X',players:[],timeLimit:30};
     const WC=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
     let currentLbTab='normal';
@@ -1251,7 +1251,7 @@
     function skipUsername(){cS();sS('home-screen');uH()}
 
     window.addEventListener('load', ()=>{
-      L=localStorage.getItem('gl_lang')||'tr'; uL();
+      L=localStorage.getItem('gl_lang')||'en'; uL();
       renderGoogleButton();
       const tk=localStorage.getItem('gl_token');
       if(tk){cS();sS('home-screen')} else sS('auth-screen');
