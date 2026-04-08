@@ -175,7 +175,7 @@
       <div class="ig"><label class="il" data-t="password">Şifre</label><input type="password" id="lp" class="inp" data-tp="ph_pass" placeholder="min 6 karakter"></div>
       <div style="text-align:right;margin:-4px 0 8px"><button onclick="forgotPassword()" style="background:none;border:none;color:var(--ac2);font-size:13px;font-family:'Nunito',sans-serif;cursor:pointer;font-weight:600" data-t="forgot_pass">Şifremi Unuttum</button></div>
       <button class="btn bp" onclick="login()" data-t="login_btn">Giriş Yap</button>
-      <div style="margin-top:16px;text-align:center"><div class="divider" style="margin-bottom:12px"><span>veya</span></div><button onclick="guestLogin()" style="width:100%;padding:14px;border:1px solid rgba(255,215,0,.3);border-radius:14px;background:linear-gradient(135deg,#1a1a10,#2a2a18);color:var(--gold);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer">👤 Misafir Olarak Oyna</button></div>
+      <div style="margin-top:16px;text-align:center"><div class="divider" style="margin-bottom:12px"><span data-t="or">veya</span></div><button onclick="guestLogin()" style="width:100%;padding:14px;border:1px solid rgba(255,215,0,.3);border-radius:14px;background:linear-gradient(135deg,#1a1a10,#2a2a18);color:var(--gold);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer" data-t="guest_login">👤 Misafir Olarak Oyna</button></div>
     </div>
     <div class="ac" id="rf" style="display:none;border-top:2px solid var(--ac)">
       <div class="at" style="background:linear-gradient(135deg,#ff4d6d,#e0225a);-webkit-background-clip:text;-webkit-text-fill-color:transparent" data-t="register_title">KAYIT OL</div>
@@ -387,6 +387,16 @@
       const nd=document.getElementById('normal-time-desc');if(nd)nd.textContent='30 '+tw;
       const rd=document.getElementById('rapid-time-desc');if(rd)rd.textContent='15 '+tw;
       const bd=document.getElementById('blitz-time-desc');if(bd)bd.textContent='5 '+tw;
+      // Extra translations not in translations.js
+      const extra={
+        forgot_pass:{tr:'Şifremi Unuttum',en:'Forgot Password',es:'Olvidé mi contraseña',fr:'Mot de passe oublié',de:'Passwort vergessen',it:'Password dimenticata',pt:'Esqueci a senha',ru:'Забыл пароль',ar:'نسيت كلمة المرور',ja:'パスワードを忘れた',ko:'비밀번호 찾기',zh:'忘记密码',vi:'Quên mật khẩu',th:'ลืมรหัสผ่าน'},
+        guest_login:{tr:'👤 Misafir Olarak Oyna',en:'👤 Play as Guest',es:'👤 Jugar como invitado',fr:'👤 Jouer en invité',de:'👤 Als Gast spielen',it:'👤 Gioca come ospite',pt:'👤 Jogar como convidado',ru:'👤 Играть как гость',ar:'👤 لعب كضيف',ja:'👤 ゲストとしてプレイ',ko:'👤 게스트로 플레이',zh:'👤 游客模式',vi:'👤 Chơi với tư cách khách',th:'👤 เล่นในฐานะแขก'}
+      };
+      Object.keys(extra).forEach(k=>{
+        document.querySelectorAll('[data-t="'+k+'"]').forEach(el=>{
+          if(extra[k][L])el.textContent=extra[k][L];
+        });
+      });
       uH();
     }
     function toggleLD(){document.getElementById('ld').classList.toggle('show')}
