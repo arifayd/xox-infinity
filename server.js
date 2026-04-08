@@ -545,6 +545,40 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// ── GUEST LOGIN ───────────────────────────────────────────
+app.post('/api/auth/guest', (req, res) => {
+  try {
+    const { language } = req.body || {};
+    const guestNum = Math.floor(1000 + Math.random() * 9000);
+    const username = `Misafir_${guestNum}`;
+
+    const guestUser = {
+      id: null,
+      username,
+      isGuest: true,
+      trophies: 0,
+      elo: 1500, elo_normal: 1500, elo_rapid: 1500, elo_blitz: 1500,
+      wins: 0, losses: 0, draws: 0,
+      language: language || 'tr',
+      avatar: '👤',
+      clan_id: null,
+      is_admin: false, is_banned: false
+    };
+
+    const token = jwt.sign(
+      { isGuest: true, username, userId: null },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    console.log(`[GUEST] ${username}`);
+    res.json({ success: true, token, user: guestUser, isGuest: true });
+  } catch (error) {
+    console.error('Guest login error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ── CHANGE USERNAME ──────────────────────────────────────
 app.post('/api/auth/change-username', async (req, res) => {
   try {
@@ -999,8 +1033,8 @@ function createRoom(p1Socket, p2Socket, gameMode = 'normal', isFriendly = false)
     id: roomId,
     gameMode,
     players: [
-      { socketId: p1Socket.id, userId: p1.userId, username: p1.username, elo: p1[eloField] || p1.elo || 1500, symbol: p1Symbol },
-      { socketId: p2Socket.id, userId: p2.userId, username: p2.username, elo: p2[eloField] || p2.elo || 1500, symbol: p2Symbol },
+      { socketId: p1Socket.id, userId: p1.userId, username: p1.username, elo: p1[eloField] || p1.elo || 1500, symbol: p1Symbol, isGuest: p1.isGuest || false },
+      { socketId: p2Socket.id, userId: p2.userId, username: p2.username, elo: p2[eloField] || p2.elo || 1500, symbol: p2Symbol, isGuest: p2.isGuest || false },
     ],
     board: Array(9).fill(null),
     xQueue: [],
@@ -1100,10 +1134,11 @@ async function endRoom(roomId, winnerSymbol, reason) {
   
   if (winner && loser) {
     const isFriendly = room.isFriendly || false;
-    const eloChange = isFriendly ? {winner: 0, loser: 0} : calculateEloChange(winner.elo, loser.elo, reason === 'draw');
+    const isGuestMatch = (winner && winner.isGuest) || (loser && loser.isGuest);
+    const eloChange = (isFriendly || isGuestMatch) ? {winner: 0, loser: 0} : calculateEloChange(winner.elo, loser.elo, reason === 'draw');
     const eloField = room.gameMode === 'rapid' ? 'elo_rapid' : (room.gameMode === 'blitz' ? 'elo_blitz' : 'elo_normal');
-    
-    if (!isFriendly) {
+
+    if (!isFriendly && !isGuestMatch) {
     if (usePostgreSQL) {
       await pgPool.query(
         `UPDATE users SET ${eloField} = ${eloField} + $1, wins = wins + 1, trophies = trophies + 30 WHERE id = $2`,
@@ -1183,16 +1218,37 @@ io.on('connection', (socket) => {
   socket.on('auth', async ({ token }) => {
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
-      
+
+      // Misafir giriş
+      if (decoded.isGuest) {
+        players[socket.id] = {
+          userId: `guest_${socket.id}`,
+          username: decoded.username,
+          elo: 1500,
+          elo_normal: 1500,
+          elo_rapid: 1500,
+          elo_blitz: 1500,
+          language: 'tr',
+          roomId: null,
+          lastSymbol: null,
+          isGuest: true
+        };
+        socket.emit('auth_success', {
+          user: { username: decoded.username, isGuest: true, elo: 1500, avatar: '👤' }
+        });
+        console.log(`[AUTH GUEST] ${decoded.username}`);
+        return;
+      }
+
       const user = usePostgreSQL
         ? (await pgPool.query('SELECT * FROM users WHERE id = $1', [decoded.userId])).rows[0]
         : db.users.find(u => u.id === decoded.userId);
-      
+
       if (!user || user.is_banned) {
         socket.emit('auth_error', { error: 'User not found or banned' });
         return;
       }
-      
+
       players[socket.id] = {
         userId: user.id,
         username: user.username,
@@ -1202,9 +1258,10 @@ io.on('connection', (socket) => {
         elo_blitz: user.elo_blitz || 1500,
         language: user.language,
         roomId: null,
-        lastSymbol: null
+        lastSymbol: null,
+        isGuest: false
       };
-      
+
       socket.emit('auth_success', { user });
       console.log(`[AUTH] ${user.username} (${user.elo} elo)`);
     } catch (error) {
