@@ -550,7 +550,7 @@ app.post('/api/auth/guest', (req, res) => {
   try {
     const { language } = req.body || {};
     const guestNum = Math.floor(1000 + Math.random() * 9000);
-    const username = `Misafir_${guestNum}`;
+    const username = `Guest_${guestNum}`;
 
     const guestUser = {
       id: usePostgreSQL ? null : (db.users.length + 1),
@@ -1142,11 +1142,10 @@ async function endRoom(roomId, winnerSymbol, reason) {
   
   if (winner && loser) {
     const isFriendly = room.isFriendly || false;
-    const isGuestMatch = (winner && winner.isGuest) || (loser && loser.isGuest);
-    const eloChange = (isFriendly || isGuestMatch) ? {winner: 0, loser: 0} : calculateEloChange(winner.elo, loser.elo, reason === 'draw');
+    const eloChange = isFriendly ? {winner: 0, loser: 0} : calculateEloChange(winner.elo, loser.elo, reason === 'draw');
     const eloField = room.gameMode === 'rapid' ? 'elo_rapid' : (room.gameMode === 'blitz' ? 'elo_blitz' : 'elo_normal');
 
-    if (!isFriendly && !isGuestMatch) {
+    if (!isFriendly) {
     if (usePostgreSQL) {
       await pgPool.query(
         `UPDATE users SET ${eloField} = ${eloField} + $1, wins = wins + 1, trophies = trophies + 30 WHERE id = $2`,

@@ -149,7 +149,7 @@
   </style>
 </head>
 <body>
-  <div class="ach-toast" id="ach-toast"><div class="ach-toast-icon" id="ach-toast-icon">🎯</div><div class="ach-toast-text"><div class="ach-toast-title" id="ach-toast-title">Başarım Kazanıldı!</div><div class="ach-toast-desc" id="ach-toast-desc">İlk Galibiyet</div></div></div>
+  <div class="ach-toast" id="ach-toast"><div class="ach-toast-icon" id="ach-toast-icon">🎯</div><div class="ach-toast-text"><div class="ach-toast-title" id="ach-toast-title">Achievement Unlocked!</div><div class="ach-toast-desc" id="ach-toast-desc">First Victory</div></div></div>
   <div class="lt" onclick="toggleLD()">🌐</div>
   <div class="ld" id="ld">
     <button class="lb" onclick="cL('tr')">🇹🇷</button><button class="lb active" onclick="cL('en')">🇬🇧</button><button class="lb" onclick="cL('es')">🇪🇸</button><button class="lb" onclick="cL('fr')">🇫🇷</button><button class="lb" onclick="cL('de')">🇩🇪</button><button class="lb" onclick="cL('it')">🇮🇹</button><button class="lb" onclick="cL('pt')">🇵🇹</button><button class="lb" onclick="cL('ru')">🇷🇺</button><button class="lb" onclick="cL('ar')">🇸🇦</button><button class="lb" onclick="cL('ja')">🇯🇵</button><button class="lb" onclick="cL('ko')">🇰🇷</button><button class="lb" onclick="cL('zh')">🇨🇳</button><button class="lb" onclick="cL('vi')">🇻🇳</button><button class="lb" onclick="cL('th')">🇹🇭</button>
@@ -159,46 +159,46 @@
   <div id="auth-screen" class="sc active">
     <div style="margin-top:60px;text-align:center">
       <h1 style="font-size:52px;font-family:'Bebas Neue';letter-spacing:4px;margin-bottom:4px"><span style="color:var(--ac2)" data-t="game_name">XOX Infinity</span></h1>
-      <p style="font-size:14px;color:var(--dim);letter-spacing:1px" data-t="game_sub">Strateji Arenası</p>
+      <p style="font-size:14px;color:var(--dim);letter-spacing:1px" data-t="game_sub">Strategy Arena</p>
     </div>
     <div class="tabs">
-      <button class="tab al" id="tl" onclick="sTab('login')" data-t="tab_login">Giriş Yap</button>
-      <button class="tab" id="tr" onclick="sTab('register')" data-t="tab_register">Kayıt Ol</button>
+      <button class="tab al" id="tl" onclick="sTab('login')" data-t="tab_login">Login</button>
+      <button class="tab" id="tr" onclick="sTab('register')" data-t="tab_register">Register</button>
     </div>
     <div class="ac" id="lf" style="border-top:2px solid var(--ac2)">
-      <div class="at" style="background:linear-gradient(135deg,#4cc9f0,#22b8e0);-webkit-background-clip:text;-webkit-text-fill-color:transparent" data-t="login_title">GİRİŞ YAP</div>
-      <div class="as" data-t="login_sub">Tekrar hoş geldin!</div>
+      <div class="at" style="background:linear-gradient(135deg,#4cc9f0,#22b8e0);-webkit-background-clip:text;-webkit-text-fill-color:transparent" data-t="login_title">LOGIN</div>
+      <div class="as" data-t="login_sub">Welcome back!</div>
       <div id="login-error" class="er"></div>
       <div id="google-btn-login" style="display:flex;justify-content:center;margin-bottom:8px"></div>
-      <div class="divider"><span data-t="or">veya</span></div>
-      <div class="ig"><label class="il" data-t="email">E-posta / Kullanıcı Adı</label><input type="text" id="lu" class="inp" data-tp="ph_email" placeholder="ornek@email.com"></div>
-      <div class="ig"><label class="il" data-t="password">Şifre</label><input type="password" id="lp" class="inp" data-tp="ph_pass" placeholder="min 6 karakter"></div>
-      <div style="text-align:right;margin:-4px 0 8px"><button onclick="forgotPassword()" style="background:none;border:none;color:var(--ac2);font-size:13px;font-family:'Nunito',sans-serif;cursor:pointer;font-weight:600" data-t="forgot_pass">Şifremi Unuttum</button></div>
-      <button class="btn bp" onclick="login()" data-t="login_btn">Giriş Yap</button>
-      <div style="margin-top:16px;text-align:center"><div class="divider" style="margin-bottom:12px"><span data-t="or">veya</span></div><button onclick="guestLogin()" style="width:100%;padding:14px;border:1px solid rgba(255,215,0,.3);border-radius:14px;background:linear-gradient(135deg,#1a1a10,#2a2a18);color:var(--gold);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer" data-t="guest_login">👤 Misafir Olarak Oyna</button></div>
+      <div class="divider"><span data-t="or">or</span></div>
+      <div class="ig"><label class="il" data-t="email">Email / Username</label><input type="text" id="lu" class="inp" data-tp="ph_email" placeholder="ornek@email.com"></div>
+      <div class="ig"><label class="il" data-t="password">Password</label><input type="password" id="lp" class="inp" data-tp="ph_pass" placeholder="min 6 karakter"></div>
+      <div style="text-align:right;margin:-4px 0 8px"><button onclick="forgotPassword()" style="background:none;border:none;color:var(--ac2);font-size:13px;font-family:'Nunito',sans-serif;cursor:pointer;font-weight:600" data-t="forgot_pass">Forgot Password</button></div>
+      <button class="btn bp" onclick="login()" data-t="login_btn">Login</button>
+      <div style="margin-top:16px;text-align:center"><div class="divider" style="margin-bottom:12px"><span data-t="or">or</span></div><button onclick="guestLogin()" style="width:100%;padding:14px;border:1px solid rgba(255,215,0,.3);border-radius:14px;background:linear-gradient(135deg,#1a1a10,#2a2a18);color:var(--gold);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer" data-t="guest_login">👤 Play as Guest</button></div>
     </div>
     <div class="ac" id="rf" style="display:none;border-top:2px solid var(--ac)">
-      <div class="at" style="background:linear-gradient(135deg,#ff4d6d,#e0225a);-webkit-background-clip:text;-webkit-text-fill-color:transparent" data-t="register_title">KAYIT OL</div>
-      <div class="as" data-t="register_sub">Yeni hesap oluştur</div>
+      <div class="at" style="background:linear-gradient(135deg,#ff4d6d,#e0225a);-webkit-background-clip:text;-webkit-text-fill-color:transparent" data-t="register_title">REGISTER</div>
+      <div class="as" data-t="register_sub">Create new account</div>
       <div id="register-error" class="er"></div>
-      <div class="ig"><label class="il" data-t="email">E-posta</label><input type="email" id="rem" class="inp" data-tp="ph_email" placeholder="ornek@email.com"></div>
-      <div class="ig"><label class="il" data-t="password">Şifre</label><input type="password" id="rp" class="inp" data-tp="ph_reg_pass" placeholder="min 6 karakter"></div>
-      <button class="btn ba" onclick="register()" data-t="register_btn">Kayıt Ol</button>
+      <div class="ig"><label class="il" data-t="email">Email</label><input type="email" id="rem" class="inp" data-tp="ph_email" placeholder="ornek@email.com"></div>
+      <div class="ig"><label class="il" data-t="password">Password</label><input type="password" id="rp" class="inp" data-tp="ph_reg_pass" placeholder="min 6 karakter"></div>
+      <button class="btn ba" onclick="register()" data-t="register_btn">Register</button>
     </div>
   </div>
 
   <!-- USERNAME SELECTION (Google users) -->
   <div id="username-screen" class="sc">
     <div style="margin-top:80px;text-align:center"><div style="font-size:64px;margin-bottom:16px">⚔️</div>
-      <div class="at" style="color:var(--ac2)">Kullanıcı Adın</div>
-      <div class="as">Oyunda görünecek ismi seç</div>
+      <div class="at" style="color:var(--ac2)">Your Username</div>
+      <div class="as">Choose your display name</div>
     </div>
     <div class="ac" style="margin-top:20px">
       <div id="uname-error" class="er"></div>
       <div style="text-align:center;color:var(--dim);font-size:13px;margin-bottom:12px">Şu anki adın: <strong id="unameDisplay" style="color:var(--ac2)">-</strong></div>
-      <div class="ig"><label class="il" data-t="username">Kullanıcı Adı</label><input type="text" id="newUname" class="inp" placeholder="yeni_isim"></div>
-      <button class="btn bp" onclick="saveUsername()">Kaydet ve Başla</button>
-      <button class="btn bs" style="margin-top:10px" onclick="skipUsername()">Bu isimle devam et</button>
+      <div class="ig"><label class="il" data-t="username">Username</label><input type="text" id="newUname" class="inp" placeholder="yeni_isim"></div>
+      <button class="btn bp" onclick="saveUsername()">Save and Start</button>
+      <button class="btn bs" style="margin-top:10px" onclick="skipUsername()">Continue with this name</button>
     </div>
   </div>
 
@@ -211,7 +211,7 @@
             <div class="league-icon" id="league-icon">🥉</div>
             <div class="league-info">
               <div class="league-name" id="h-league">BRONZ LİG</div>
-              <div class="league-trophies"><span>🏆</span> <span id="h-trophies" style="font-size:inherit;font-weight:inherit;opacity:1">0</span> <span data-t="trophy_label">kupa</span></div>
+              <div class="league-trophies"><span>🏆</span> <span id="h-trophies" style="font-size:inherit;font-weight:inherit;opacity:1">0</span> <span data-t="trophy_label">trophies</span></div>
             </div>
           </div>
           <div class="league-progress">
@@ -231,30 +231,30 @@
       </div>
       <div class="ms" data-t="play_online">🎮 Online</div>
       <!-- #9 — Rapid/Blitz alt açıklamalarından 1.5x ELO / 2x ELO kaldırıldı -->
-      <button class="bb" style="background:linear-gradient(135deg,#1a1a3e,#2a2a5e);color:var(--ac2);border:1px solid rgba(76,201,240,.3)" onclick="findMatch('normal')"><div class="bi">🎮</div><div class="bx"><span class="bt" data-t="online_match">Online Maç</span><span class="bsb" id="normal-time-desc">30 sn/hamle</span></div></button>
-      <button class="bb" style="background:linear-gradient(135deg,#1a2a1a,#2a4a2e);color:#fbbf24;border:1px solid rgba(251,191,36,.3)" onclick="findMatch('rapid')"><div class="bi">🔥</div><div class="bx"><span class="bt" data-t="rapid_mode">Rapid Mod</span><span class="bsb" id="rapid-time-desc">15 sn/hamle</span></div></button>
-      <button class="bb" style="background:linear-gradient(135deg,#1e0a1a,#3e1a2e);color:var(--ac);border:1px solid rgba(255,77,109,.3)" onclick="findMatch('blitz')"><div class="bi">⚡</div><div class="bx"><span class="bt" data-t="blitz_mode">Blitz Mod</span><span class="bsb" id="blitz-time-desc">5 sn/hamle</span></div></button>
-      <div class="ms" data-t="play_friend">🤝 Arkadaşınla Oyna</div>
-      <button class="bb" style="background:linear-gradient(135deg,#0a1a2a,#1a3a4a);color:#38bdf8;border:1px solid rgba(56,189,248,.3)" onclick="showChM()"><div class="bi">🤝</div><div class="bx"><span class="bt" data-t="challenge_friend">Arkadaşına Meydan Oku</span><span class="bsb" data-t="challenge_sub">Kullanıcı adı gir, mod seç</span></div></button>
-      <div class="ms" data-t="play_ai">🤖 Yapay Zekaya Karşı</div>
+      <button class="bb" style="background:linear-gradient(135deg,#1a1a3e,#2a2a5e);color:var(--ac2);border:1px solid rgba(76,201,240,.3)" onclick="findMatch('normal')"><div class="bi">🎮</div><div class="bx"><span class="bt" data-t="online_match">Online Match</span><span class="bsb" id="normal-time-desc">30 sn/hamle</span></div></button>
+      <button class="bb" style="background:linear-gradient(135deg,#1a2a1a,#2a4a2e);color:#fbbf24;border:1px solid rgba(251,191,36,.3)" onclick="findMatch('rapid')"><div class="bi">🔥</div><div class="bx"><span class="bt" data-t="rapid_mode">Rapid Mode</span><span class="bsb" id="rapid-time-desc">15 sn/hamle</span></div></button>
+      <button class="bb" style="background:linear-gradient(135deg,#1e0a1a,#3e1a2e);color:var(--ac);border:1px solid rgba(255,77,109,.3)" onclick="findMatch('blitz')"><div class="bi">⚡</div><div class="bx"><span class="bt" data-t="blitz_mode">Blitz Mode</span><span class="bsb" id="blitz-time-desc">5 sn/hamle</span></div></button>
+      <div class="ms" data-t="play_friend">🤝 Play with Friend</div>
+      <button class="bb" style="background:linear-gradient(135deg,#0a1a2a,#1a3a4a);color:#38bdf8;border:1px solid rgba(56,189,248,.3)" onclick="showChM()"><div class="bi">🤝</div><div class="bx"><span class="bt" data-t="challenge_friend">Challenge a Friend</span><span class="bsb" data-t="challenge_sub">Enter username, pick mode</span></div></button>
+      <div class="ms" data-t="play_ai">🤖 Play vs AI</div>
       <!-- #10 — AI butonlarından alt açıklamalar kaldırıldı -->
       <div class="dg">
-        <button class="db" style="background:linear-gradient(135deg,#0a2a1a,#1a4a2e);color:#4ade80;border:1px solid rgba(74,222,128,.3)" onclick="startAI('easy')"><span class="dem">😊</span><span data-t="easy">Kolay</span></button>
-        <button class="db" style="background:linear-gradient(135deg,#1a2a0a,#2a4a1a);color:#fbbf24;border:1px solid rgba(251,191,36,.3)" onclick="startAI('medium')"><span class="dem">🤔</span><span data-t="medium">Orta</span></button>
-        <button class="db" style="background:linear-gradient(135deg,#2a1a0a,#4a2a1a);color:#f97316;border:1px solid rgba(249,115,22,.3)" onclick="startAI('hard')"><span class="dem">😈</span><span data-t="hard">Zor</span></button>
-        <button class="db" style="background:linear-gradient(135deg,#2a0a0a,#4a1a1a);color:var(--ac);border:1px solid rgba(255,77,109,.3)" onclick="startAI('impossible')"><span class="dem">💀</span><span data-t="impossible">Çok Zor</span></button>
+        <button class="db" style="background:linear-gradient(135deg,#0a2a1a,#1a4a2e);color:#4ade80;border:1px solid rgba(74,222,128,.3)" onclick="startAI('easy')"><span class="dem">😊</span><span data-t="easy">Easy</span></button>
+        <button class="db" style="background:linear-gradient(135deg,#1a2a0a,#2a4a1a);color:#fbbf24;border:1px solid rgba(251,191,36,.3)" onclick="startAI('medium')"><span class="dem">🤔</span><span data-t="medium">Medium</span></button>
+        <button class="db" style="background:linear-gradient(135deg,#2a1a0a,#4a2a1a);color:#f97316;border:1px solid rgba(249,115,22,.3)" onclick="startAI('hard')"><span class="dem">😈</span><span data-t="hard">Hard</span></button>
+        <button class="db" style="background:linear-gradient(135deg,#2a0a0a,#4a1a1a);color:var(--ac);border:1px solid rgba(255,77,109,.3)" onclick="startAI('impossible')"><span class="dem">💀</span><span data-t="impossible">Impossible</span></button>
       </div>
-      <div class="ms" data-t="social" style="margin-top:16px">Sosyal</div>
-      <button class="bb" style="background:linear-gradient(135deg,#1a2a3e,#2a3a5e);color:#60a5fa;border:1px solid rgba(96,165,250,.3)" onclick="showFr()"><div class="bi">👥</div><div class="bx"><span class="bt" data-t="friends">Arkadaşlar</span><span class="bsb" data-t="friends_sub">Arkadaş ekle ve yönet</span></div></button>
-      <button class="bb" style="background:linear-gradient(135deg,#2a1a3e,#4a2a5e);color:#c084fc;border:1px solid rgba(192,132,252,.3)" onclick="showPr()"><div class="bi">👤</div><div class="bx"><span class="bt" data-t="profile">Profil</span><span class="bsb" data-t="profile_sub">İstatistiklerini gör</span></div></button>
-      <div class="ms" data-t="more">Daha Fazla</div>
-      <button class="bb" style="background:linear-gradient(135deg,#2a2a4e,#3a3a5e);color:var(--ac2);border:1px solid rgba(76,201,240,.3)" onclick="showLb()"><div class="bi">📊</div><div class="bx"><span class="bt" data-t="leaderboard">Sıralamalar</span><span class="bsb" data-t="leaderboard_sub">En iyi oyunculara bak</span></div></button>
-      <button class="bb" style="background:linear-gradient(135deg,#2a2e1a,#3a4e1a);color:#4ade80;border:1px solid rgba(74,222,128,.3)" onclick="logoutFn()"><div class="bi">🚪</div><div class="bx"><span class="bt" data-t="logout">Çıkış Yap</span></div></button>
+      <div class="ms" data-t="social" style="margin-top:16px">Social</div>
+      <button class="bb" style="background:linear-gradient(135deg,#1a2a3e,#2a3a5e);color:#60a5fa;border:1px solid rgba(96,165,250,.3)" onclick="showFr()"><div class="bi">👥</div><div class="bx"><span class="bt" data-t="friends">Friends</span><span class="bsb" data-t="friends_sub">Add and manage friends</span></div></button>
+      <button class="bb" style="background:linear-gradient(135deg,#2a1a3e,#4a2a5e);color:#c084fc;border:1px solid rgba(192,132,252,.3)" onclick="showPr()"><div class="bi">👤</div><div class="bx"><span class="bt" data-t="profile">Profile</span><span class="bsb" data-t="profile_sub">View your stats</span></div></button>
+      <div class="ms" data-t="more">More</div>
+      <button class="bb" style="background:linear-gradient(135deg,#2a2a4e,#3a3a5e);color:var(--ac2);border:1px solid rgba(76,201,240,.3)" onclick="showLb()"><div class="bi">📊</div><div class="bx"><span class="bt" data-t="leaderboard">Leaderboard</span><span class="bsb" data-t="leaderboard_sub">See the best players</span></div></button>
+      <button class="bb" style="background:linear-gradient(135deg,#2a2e1a,#3a4e1a);color:#4ade80;border:1px solid rgba(74,222,128,.3)" onclick="logoutFn()"><div class="bi">🚪</div><div class="bx"><span class="bt" data-t="logout">Logout</span></div></button>
     </div>
   </div>
 
   <!-- SEARCHING -->
-  <div id="searching-screen" class="sc"><div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="font-size:80px;margin-bottom:20px;animation:pu 1.5s infinite">🔍</div><div class="stxt" data-t="searching">RAKİP ARANIYOR</div><div id="search-sub" style="color:var(--dim);font-size:13px;margin-top:8px;text-align:center"></div><button class="cbtn" onclick="cancelM()" data-t="cancel">Vazgeç</button></div></div>
+  <div id="searching-screen" class="sc"><div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="font-size:80px;margin-bottom:20px;animation:pu 1.5s infinite">🔍</div><div class="stxt" data-t="searching">FINDING OPPONENT</div><div id="search-sub" style="color:var(--dim);font-size:13px;margin-top:8px;text-align:center"></div><button class="cbtn" onclick="cancelM()" data-t="cancel">Cancel</button></div></div>
 
   <!-- GAME -->
   <div id="game-screen" class="sc">
@@ -284,14 +284,14 @@
   <div id="res" class="ro"><div class="rc"><div class="re" id="rEmoji">🏆</div><div class="rt w" id="rTitle">KAZANDIN!</div><div class="rsb" id="rSub">ELO: +15</div><div class="rbc"><button class="btn bp" id="rSame" onclick="reqRematch()" style="display:none" data-t="rematch_same">Aynı Kişiyle Tekrar</button><button class="btn ba" id="rAi" onclick="remAI()" style="display:none" data-t="rematch_ai">Tekrar Oyna</button><button class="btn bs" onclick="goH()" data-t="home_btn">Ana Menü</button></div></div></div>
 
   <!-- CHALLENGE MODAL -->
-  <div id="chM" class="om"><div class="mc"><div class="mt" data-t="challenge_title">🤝 Arkadaşına Meydan Oku</div><div class="ig"><label class="il" data-t="challenge_opponent">Rakip Kullanıcı Adı</label><input type="text" id="chU" class="inp" placeholder="..."></div><div class="ig"><label class="il" data-t="challenge_mode">Oyun Modu</label><div style="display:flex;gap:8px"><button class="btn bs" style="flex:1;padding:12px" id="cm-n" onclick="sCM('normal')">🎮</button><button class="btn bs" style="flex:1;padding:12px" id="cm-r" onclick="sCM('rapid')">🔥</button><button class="btn bs" style="flex:1;padding:12px" id="cm-b" onclick="sCM('blitz')">⚡</button></div></div><div id="ch-err" class="er" style="margin-top:12px"></div><button class="btn bp" style="margin-top:16px" onclick="sendCh()" data-t="challenge_send">Meydan Oku!</button><button class="btn bs" style="margin-top:8px" onclick="closeChM()" data-t="challenge_cancel">İptal</button></div></div>
+  <div id="chM" class="om"><div class="mc"><div class="mt" data-t="challenge_title">🤝 Challenge a Friend</div><div class="ig"><label class="il" data-t="challenge_opponent">Opponent Username</label><input type="text" id="chU" class="inp" placeholder="..."></div><div class="ig"><label class="il" data-t="challenge_mode">Game Mode</label><div style="display:flex;gap:8px"><button class="btn bs" style="flex:1;padding:12px" id="cm-n" onclick="sCM('normal')">🎮</button><button class="btn bs" style="flex:1;padding:12px" id="cm-r" onclick="sCM('rapid')">🔥</button><button class="btn bs" style="flex:1;padding:12px" id="cm-b" onclick="sCM('blitz')">⚡</button></div></div><div id="ch-err" class="er" style="margin-top:12px"></div><button class="btn bp" style="margin-top:16px" onclick="sendCh()" data-t="challenge_send">Challenge!</button><button class="btn bs" style="margin-top:8px" onclick="closeChM()" data-t="challenge_cancel">Cancel</button></div></div>
 
   <!-- INCOMING CHALLENGE -->
-  <div id="incCh" style="position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#1a1a3e,#2a2a5e);border-bottom:2px solid var(--ac2);padding:16px 20px;z-index:150;transform:translateY(-100%);transition:transform .3s ease-out;display:flex;align-items:center;gap:12px"><div style="font-size:32px">⚔️</div><div style="flex:1"><div style="font-size:14px;font-weight:800" id="incFrom"></div><div style="color:var(--dim);font-size:12px" id="incMode"></div></div><button class="btn bp" style="padding:10px 16px;font-size:13px;width:auto" onclick="accCh()" data-t="invite_accept">Kabul Et</button><button class="btn bs" style="padding:10px 16px;font-size:13px;width:auto" onclick="decCh()" data-t="invite_reject">Reddet</button></div>
+  <div id="incCh" style="position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#1a1a3e,#2a2a5e);border-bottom:2px solid var(--ac2);padding:16px 20px;z-index:150;transform:translateY(-100%);transition:transform .3s ease-out;display:flex;align-items:center;gap:12px"><div style="font-size:32px">⚔️</div><div style="flex:1"><div style="font-size:14px;font-weight:800" id="incFrom"></div><div style="color:var(--dim);font-size:12px" id="incMode"></div></div><button class="btn bp" style="padding:10px 16px;font-size:13px;width:auto" onclick="accCh()" data-t="invite_accept">Accept</button><button class="btn bs" style="padding:10px 16px;font-size:13px;width:auto" onclick="decCh()" data-t="invite_reject">Decline</button></div>
 
   <!-- #6 — LEADERBOARD (Normal/Rapid/Blitz sekmeler) -->
   <div id="lb-screen" class="sc">
-    <div class="gh"><button class="gbk" onclick="goH()">←</button><div style="flex:1;text-align:center;font-size:18px;font-weight:800" data-t="leaderboard">Sıralamalar</div><div style="width:40px"></div></div>
+    <div class="gh"><button class="gbk" onclick="goH()">←</button><div style="flex:1;text-align:center;font-size:18px;font-weight:800" data-t="leaderboard">Leaderboard</div><div style="width:40px"></div></div>
     <div class="lb-tabs">
       <button class="lb-tab active" id="lb-tab-normal" onclick="switchLbTab('normal')">Normal</button>
       <button class="lb-tab" id="lb-tab-rapid" onclick="switchLbTab('rapid')">Rapid</button>
@@ -303,24 +303,24 @@
 
   <!-- FRIENDS -->
   <div id="fr-screen" class="sc">
-    <div class="gh"><button class="gbk" onclick="goH()">←</button><div style="flex:1;text-align:center;font-size:18px;font-weight:800" data-t="friends">Arkadaşlar</div><div style="width:40px"></div></div>
+    <div class="gh"><button class="gbk" onclick="goH()">←</button><div style="flex:1;text-align:center;font-size:18px;font-weight:800" data-t="friends">Friends</div><div style="width:40px"></div></div>
     <div style="width:100%;margin-top:10px">
-      <div style="display:flex;gap:8px;margin-bottom:16px"><input type="text" id="frU" class="inp" style="flex:1" placeholder="..."><button class="btn bp" style="width:auto;padding:12px 20px;border-radius:12px" onclick="sendFR()" data-t="friend_send">İstek Gönder</button></div>
+      <div style="display:flex;gap:8px;margin-bottom:16px"><input type="text" id="frU" class="inp" style="flex:1" placeholder="..."><button class="btn bp" style="width:auto;padding:12px 20px;border-radius:12px" onclick="sendFR()" data-t="friend_send">Send Request</button></div>
       <div id="fr-msg" class="er" style="margin-bottom:12px"></div>
-      <div id="pend-sec" style="display:none"><div class="ms" data-t="friend_pending">📩 Bekleyen İstekler</div><div id="pend-list"></div></div>
-      <div class="ms" data-t="friend_list">✅ Arkadaşlar</div><div id="fr-list"></div>
-      <div style="text-align:center;color:var(--dim);padding:30px 0;font-size:14px" id="fr-empty" data-t="friend_empty">Henüz arkadaş yok.</div>
+      <div id="pend-sec" style="display:none"><div class="ms" data-t="friend_pending">📩 Pending Requests</div><div id="pend-list"></div></div>
+      <div class="ms" data-t="friend_list">✅ Friends</div><div id="fr-list"></div>
+      <div style="text-align:center;color:var(--dim);padding:30px 0;font-size:14px" id="fr-empty" data-t="friend_empty">No friends yet.</div>
     </div>
   </div>
 
   <!-- PROFILE -->
   <div id="pr-screen" class="sc">
-    <div class="gh"><button class="gbk" onclick="goH()">←</button><div style="flex:1;text-align:center;font-size:18px;font-weight:800" data-t="profile_title">Profil</div><div style="width:40px"></div></div>
+    <div class="gh"><button class="gbk" onclick="goH()">←</button><div style="flex:1;text-align:center;font-size:18px;font-weight:800" data-t="profile_title">Profile</div><div style="width:40px"></div></div>
     <div style="width:100%;margin-top:10px">
       <div style="text-align:center;margin-bottom:20px"><div style="font-size:64px;margin-bottom:8px">⚔️</div><div style="font-size:22px;font-weight:900" id="prU">-</div><div style="color:var(--dim);font-size:13px;margin-top:4px" id="prL">-</div></div>
       <div class="sr sr3"><div class="sk"><div class="sn" style="color:var(--ac2)" id="prEn">1500</div><div class="sl" data-t="elo_normal">Normal</div></div><div class="sk"><div class="sn" style="color:#fbbf24" id="prEr">1500</div><div class="sl" data-t="elo_rapid">Rapid</div></div><div class="sk"><div class="sn" style="color:var(--ac)" id="prEb">1500</div><div class="sl" data-t="elo_blitz">Blitz</div></div></div>
       <div class="sr sr3"><div class="sk"><div class="sn w" id="prW">0</div><div class="sl" data-t="wins">Galibiyet</div></div><div class="sk"><div class="sn l" id="prLs">0</div><div class="sl" data-t="losses">Mağlubiyet</div></div><div class="sk"><div class="sn" id="prWr">0%</div><div class="sl" data-t="winrate">Kazanma</div></div></div>
-      <div class="ms" data-t="achievements">Başarımlar</div>
+      <div class="ms" data-t="achievements">Achievements</div>
       <div id="achProgress" style="width:100%;margin-top:8px"></div>
       <div id="achList" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
       <div id="achNext" style="width:100%;margin-top:10px"></div>
@@ -389,7 +389,7 @@
       const bd=document.getElementById('blitz-time-desc');if(bd)bd.textContent='5 '+tw;
       // Extra translations not in translations.js
       const extra={
-        forgot_pass:{tr:'Şifremi Unuttum',en:'Forgot Password',es:'Olvidé mi contraseña',fr:'Mot de passe oublié',de:'Passwort vergessen',it:'Password dimenticata',pt:'Esqueci a senha',ru:'Забыл пароль',ar:'نسيت كلمة المرور',ja:'パスワードを忘れた',ko:'비밀번호 찾기',zh:'忘记密码',vi:'Quên mật khẩu',th:'ลืมรหัสผ่าน'},
+        forgot_pass:{tr:'Forgot Password',en:'Forgot Password',es:'Olvidé mi contraseña',fr:'Mot de passe oublié',de:'Passwort vergessen',it:'Password dimenticata',pt:'Esqueci a senha',ru:'Забыл пароль',ar:'نسيت كلمة المرور',ja:'パスワードを忘れた',ko:'비밀번호 찾기',zh:'忘记密码',vi:'Quên mật khẩu',th:'ลืมรหัสผ่าน'},
         guest_login:{tr:'👤 Misafir Olarak Oyna',en:'👤 Play as Guest',es:'👤 Jugar como invitado',fr:'👤 Jouer en invité',de:'👤 Als Gast spielen',it:'👤 Gioca come ospite',pt:'👤 Jogar como convidado',ru:'👤 Играть как гость',ar:'👤 لعب كضيف',ja:'👤 ゲストとしてプレイ',ko:'👤 게스트로 플레이',zh:'👤 游客模式',vi:'👤 Chơi với tư cách khách',th:'👤 เล่นในฐานะแขก'}
       };
       Object.keys(extra).forEach(k=>{
@@ -420,12 +420,12 @@
     async function forgotPassword(){
       const em=document.getElementById('lu').value;
       if(!em||!em.includes('@')){sE('login-error','Lütfen e-posta adresinizi girin');return}
-      if(!useFirebase){sE('login-error','Şifre sıfırlama sadece e-posta ile kayıtlı hesaplarda çalışır');return}
+      if(!useFirebase){sE('login-error','Password reset only works for email accounts');return}
       try{
         await fbAuth.sendPasswordResetEmail(em);
         sE('login-error','');
         document.getElementById('login-error').style.color='#4cc9f0';
-        document.getElementById('login-error').textContent='Şifre sıfırlama maili gönderildi! E-postanı kontrol et.';
+        document.getElementById('login-error').textContent='Password reset email sent! Check your inbox.';
       }catch(e){sE('login-error',e.message.includes('user-not-found')?'Bu e-posta ile kayıtlı hesap bulunamadı':e.message)}
     }
 
@@ -443,7 +443,7 @@
           if(!fbUser.emailVerified){
             await fbUser.sendEmailVerification();
             await fbAuth.signOut();
-            sE('login-error','E-posta doğrulanmamış! Doğrulama maili tekrar gönderildi. Kontrol et ve bağlantıya tıkla.');
+            sE('login-error','Email not verified! Verification email resent. Check your inbox.');
             return;
           }
           const idToken=await fbUser.getIdToken();
@@ -458,7 +458,7 @@
             else{sS('home-screen');uH()}
           }
           else sE('login-error',d.error);
-        }catch(e){sE('login-error',e.message.includes('wrong-password')?'Yanlış şifre':e.message.includes('user-not-found')?'Kullanıcı bulunamadı':e.message)}
+        }catch(e){sE('login-error',e.message.includes('wrong-password')?'Wrong password':e.message.includes('user-not-found')?'User not found':e.message)}
       } else {
         try{const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:em,password:p})});const d=await r.json();if(d.success){localStorage.setItem('gl_token',d.token);U=d.user;cS();sS('home-screen');uH()}else sE('login-error',d.error)}catch(e){sE('login-error','Connection error')}
       }
@@ -485,9 +485,9 @@
           await fbAuth.signOut();
           sE('register-error','');
           const msgEl=document.getElementById('register-error');
-          msgEl.textContent='✅ Doğrulama maili gönderildi! E-postanı kontrol et ve bağlantıya tıkla, sonra giriş yap.';
+          msgEl.textContent='✅ Verification email sent! Check your inbox, click the link, then login.';
           msgEl.className='sm show';
-        }catch(e){sE('register-error',e.message.includes('email-already-in-use')?'Bu e-posta zaten kullanılıyor':e.message.includes('weak-password')?'Şifre çok zayıf (min 6 karakter)':e.message)}
+        }catch(e){sE('register-error',e.message.includes('email-already-in-use')?'This email is already in use':e.message.includes('weak-password')?'Password too weak (min 6 characters)':e.message)}
       } else {
         const u=em?em.split('@')[0]:('user_'+Math.floor(Math.random()*9999));
         try{const r=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p,language:L})});const d=await r.json();if(d.success){localStorage.setItem('gl_token',d.token);U=d.user;cS();sS('home-screen');uH()}else sE('register-error',d.error)}catch(e){sE('register-error','Connection error')}
@@ -511,7 +511,7 @@
       
       if(isCapacitor){
         // Android: show custom button, open popup page
-        container.innerHTML=`<button onclick="openGooglePopup()" style="width:100%;padding:14px;border:1px solid var(--bd);border-radius:14px;background:var(--s);color:var(--tx);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"><span data-t="google_login">Google ile Giriş Yap</span></button>`;
+        container.innerHTML=`<button onclick="openGooglePopup()" style="width:100%;padding:14px;border:1px solid var(--bd);border-radius:14px;background:var(--s);color:var(--tx);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"><span data-t="google_login">Sign in with Google</span></button>`;
         return;
       }
       
@@ -700,7 +700,7 @@
 
     // ── CHALLENGE ───
     let chMode='normal';
-    function showChM(){document.getElementById('chM').classList.add('show');sCM('normal')}
+    function showChM(){if(U&&U.isGuest){alert(L==='tr'?'Arkadaş daveti için kayıt olmalısın':'Register to challenge friends');return;}document.getElementById('chM').classList.add('show');sCM('normal')}
     function closeChM(){document.getElementById('chM').classList.remove('show')}
     function sCM(m){chMode=m;['n','r','b'].forEach(x=>{const b=document.getElementById('cm-'+x);b.style.background=({'n':'normal','r':'rapid','b':'blitz'}[x]===m)?'rgba(76,201,240,.2)':'';b.style.borderColor=({'n':'normal','r':'rapid','b':'blitz'}[x]===m)?'var(--ac2)':''})}
     function sendCh(){const u=document.getElementById('chU').value.trim();if(!u){sE('ch-err',t('username'));return}S.emit('challenge_friend',{targetUsername:u,gameMode:chMode});closeChM();document.getElementById('search-sub').textContent=u+' ...';sS('searching-screen')}
@@ -975,7 +975,7 @@
       document.getElementById('lb-tab-'+mode).classList.add('active');
       loadLb(mode);
     }
-    function showLb(){sS('lb-screen');loadLb(currentLbTab)}
+    function showLb(){if(U&&U.isGuest){alert(L==='tr'?'Sıralama özelliği için kayıt olmalısın':'Register to view leaderboard');return;}sS('lb-screen');loadLb(currentLbTab)}
     function loadLb(mode){
       const apiMode = mode==='league' ? 'league' : (mode||'normal');
       const endpoint = mode==='league' ? '/api/leaderboard/trophies' : '/api/leaderboard/elo?mode='+apiMode;
@@ -1003,7 +1003,7 @@
 
     // ── FRIENDS ───
     let frRefreshTimer=null;
-    function showFr(){sS('fr-screen');ldFr();ldPend();startFrRefresh()}
+    function showFr(){if(U&&U.isGuest){alert(L==='tr'?'Arkadaş özelliği için kayıt olmalısın':'Register to use friends feature');return;}sS('fr-screen');ldFr();ldPend();startFrRefresh()}
     function startFrRefresh(){stopFrRefresh();frRefreshTimer=setInterval(()=>{if(document.getElementById('fr-screen').classList.contains('active'))ldFr();else stopFrRefresh()},5000)}
     function stopFrRefresh(){if(frRefreshTimer){clearInterval(frRefreshTimer);frRefreshTimer=null}}
     function ldFr(){const tk=localStorage.getItem('gl_token');fetch('/api/friends',{headers:{'Authorization':'Bearer '+tk}}).then(r=>r.json()).then(d=>{const l=document.getElementById('fr-list'),e=document.getElementById('fr-empty');if(d.success&&d.friends&&d.friends.length>0){e.style.display='none';const sorted=[...d.friends].sort((a,b)=>(b.online?1:0)-(a.online?1:0));l.innerHTML=sorted.map(f=>{const eid=f.id||0;const eun=encodeURIComponent(f.username);const dot=f.online?'<div style="width:10px;height:10px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;flex-shrink:0"></div>':'<div style="width:10px;height:10px;border-radius:50%;background:#555;flex-shrink:0"></div>';const statusTxt=f.online?'<span style="font-size:10px;color:#4ade80;font-weight:600">Online</span>':'<span style="font-size:10px;color:var(--dim)">Offline</span>';return `<div class="lbi">${dot}<div style="flex:1"><div class="lbn">${f.username}</div>${statusTxt}</div><button onclick="removeFr(${eid},decodeURIComponent('${eun}'))" style="background:rgba(255,77,109,.15);border:1px solid rgba(255,77,109,.3);color:var(--ac);border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">✕</button></div>`}).join('')}else{e.style.display='block';l.innerHTML=''}}).catch(()=>{document.getElementById('fr-empty').style.display='block'})}
@@ -1022,7 +1022,7 @@
 
     // All achievements definition
     const ALL_ACHS=[
-      {b:'🎯',t:'İlk Galibiyet',d:'1 maç kazan',c:(w,l,tr,total,en,er,eb,best)=>w>=1},
+      {b:'🎯',t:'First Victory',d:'1 maç kazan',c:(w,l,tr,total,en,er,eb,best)=>w>=1},
       {b:'✊',t:'Başlangıç',d:'3 maç kazan',c:(w)=>w>=3},
       {b:'⭐',t:'Yıldız Aday',d:'5 maç kazan',c:(w)=>w>=5},
       {b:'🏆',t:'10 Galibiyet',d:'10 maç kazan',c:(w)=>w>=10},
@@ -1076,26 +1076,26 @@
       {b:'🌙',t:'Ay Tanrısı',d:'3500 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=3500},
       {b:'💀',t:'Ölümsüz',d:'4000 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=4000},
       {b:'🕳️',t:'Kara Delik',d:'5000 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=5000},
-      {b:'🥉',t:'Bronz Başlangıç',d:'50 kupa',c:(w,l,tr)=>tr>=50},
-      {b:'🎀',t:'Koleksiyoncu',d:'100 kupa',c:(w,l,tr)=>tr>=100},
-      {b:'🏵️',t:'Rozet',d:'200 kupa',c:(w,l,tr)=>tr>=200},
-      {b:'🎗️',t:'Şerit',d:'350 kupa',c:(w,l,tr)=>tr>=350},
-      {b:'🥈',t:'Gümüş Lig',d:'500 kupa',c:(w,l,tr)=>tr>=500},
-      {b:'🪙',t:'Altın Yolu',d:'750 kupa',c:(w,l,tr)=>tr>=750},
-      {b:'💰',t:'Hazine',d:'1000 kupa',c:(w,l,tr)=>tr>=1000},
-      {b:'💳',t:'Platin',d:'1500 kupa',c:(w,l,tr)=>tr>=1500},
-      {b:'🥇',t:'Altın Lig',d:'2000 kupa',c:(w,l,tr)=>tr>=2000},
-      {b:'🏆',t:'Şampiyon',d:'3000 kupa',c:(w,l,tr)=>tr>=3000},
-      {b:'👸',t:'Kraliçe',d:'5000 kupa',c:(w,l,tr)=>tr>=5000},
-      {b:'🤴',t:'Kral',d:'7500 kupa',c:(w,l,tr)=>tr>=7500},
-      {b:'💎',t:'Elmas Lig',d:'10000 kupa',c:(w,l,tr)=>tr>=10000},
-      {b:'🔷',t:'Safir',d:'15000 kupa',c:(w,l,tr)=>tr>=15000},
-      {b:'❤️‍🔥',t:'Yakut',d:'25000 kupa',c:(w,l,tr)=>tr>=25000},
-      {b:'🪩',t:'Disko Topu',d:'50000 kupa',c:(w,l,tr)=>tr>=50000},
-      {b:'⭐',t:'Mega Yıldız',d:'75000 kupa',c:(w,l,tr)=>tr>=75000},
-      {b:'🔥',t:'Efsane Lig',d:'100000 kupa',c:(w,l,tr)=>tr>=100000},
-      {b:'🌈',t:'Gökkuşağı',d:'250000 kupa',c:(w,l,tr)=>tr>=250000},
-      {b:'🏔️',t:'Everest',d:'500000 kupa',c:(w,l,tr)=>tr>=500000},
+      {b:'🥉',t:'Bronz Başlangıç',d:'50 trophies',c:(w,l,tr)=>tr>=50},
+      {b:'🎀',t:'Koleksiyoncu',d:'100 trophies',c:(w,l,tr)=>tr>=100},
+      {b:'🏵️',t:'Rozet',d:'200 trophies',c:(w,l,tr)=>tr>=200},
+      {b:'🎗️',t:'Şerit',d:'350 trophies',c:(w,l,tr)=>tr>=350},
+      {b:'🥈',t:'Gümüş Lig',d:'500 trophies',c:(w,l,tr)=>tr>=500},
+      {b:'🪙',t:'Altın Yolu',d:'750 trophies',c:(w,l,tr)=>tr>=750},
+      {b:'💰',t:'Hazine',d:'1000 trophies',c:(w,l,tr)=>tr>=1000},
+      {b:'💳',t:'Platin',d:'1500 trophies',c:(w,l,tr)=>tr>=1500},
+      {b:'🥇',t:'Altın Lig',d:'2000 trophies',c:(w,l,tr)=>tr>=2000},
+      {b:'🏆',t:'Şampiyon',d:'3000 trophies',c:(w,l,tr)=>tr>=3000},
+      {b:'👸',t:'Kraliçe',d:'5000 trophies',c:(w,l,tr)=>tr>=5000},
+      {b:'🤴',t:'Kral',d:'7500 trophies',c:(w,l,tr)=>tr>=7500},
+      {b:'💎',t:'Elmas Lig',d:'10000 trophies',c:(w,l,tr)=>tr>=10000},
+      {b:'🔷',t:'Safir',d:'15000 trophies',c:(w,l,tr)=>tr>=15000},
+      {b:'❤️‍🔥',t:'Yakut',d:'25000 trophies',c:(w,l,tr)=>tr>=25000},
+      {b:'🪩',t:'Disko Topu',d:'50000 trophies',c:(w,l,tr)=>tr>=50000},
+      {b:'⭐',t:'Mega Yıldız',d:'75000 trophies',c:(w,l,tr)=>tr>=75000},
+      {b:'🔥',t:'Efsane Lig',d:'100000 trophies',c:(w,l,tr)=>tr>=100000},
+      {b:'🌈',t:'Gökkuşağı',d:'250000 trophies',c:(w,l,tr)=>tr>=250000},
+      {b:'🏔️',t:'Everest',d:'500000 trophies',c:(w,l,tr)=>tr>=500000},
       {b:'📊',t:'%60 Oran',d:'10+ maç %60 kazanma',c:(w,l,tr,total)=>total>=10&&w/total>=0.6},
       {b:'🎯',t:'Keskin Nişancı',d:'20+ maç %70 kazanma',c:(w,l,tr,total)=>total>=20&&w/total>=0.7},
       {b:'🏹',t:'%75 Efsane',d:'30+ maç %75 kazanma',c:(w,l,tr,total)=>total>=30&&w/total>=0.75},
