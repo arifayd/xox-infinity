@@ -637,6 +637,7 @@ app.get('/api/leaderboard/elo', async (req, res) => {
       users = result.rows;
     } else {
       users = db.users
+        .filter(u => !u.isGuest)
         .map(({ password, password_hash, ...u }) => u)
         .sort((a, b) => {
           return (b[eloField]||1500) - (a[eloField]||1500);
@@ -658,12 +659,13 @@ app.get('/api/leaderboard/trophies', async (req, res) => {
     let users;
     if (usePostgreSQL) {
       const result = await pgPool.query(
-        'SELECT id, username, trophies, wins, losses, avatar FROM users ORDER BY trophies DESC LIMIT $1',
+        'SELECT id, username, trophies, wins, losses, avatar FROM users WHERE "isGuest" IS NOT TRUE ORDER BY trophies DESC LIMIT $1',
         [limit]
       );
       users = result.rows;
     } else {
       users = db.users
+        .filter(u => !u.isGuest)
         .map(({ password, password_hash, ...u }) => u)
         .sort((a, b) => b.trophies - a.trophies)
         .slice(0, limit);

@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>XOX Infinity — Strategy Arena</title>
   <script src="/socket.io/socket.io.js"></script>
   <script src="translations.js"></script>
@@ -146,9 +149,16 @@
     .ach-item .ach-name{font-size:12px;font-weight:700}
     .ach-item .ach-desc{font-size:10px;color:var(--dim)}
     .ach-item.locked .ach-icon{font-size:16px}
+
+    /* Connection overlay */
+    .conn-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:300;display:none}
+    .conn-overlay.show{display:flex}
+    .conn-box{background:var(--s2);border:1px solid var(--bd);border-radius:20px;padding:32px;text-align:center;max-width:320px}
+    .conn-spin{border:4px solid #333;border-top:4px solid var(--ac);border-radius:50%;width:40px;height:40px;animation:s 1s linear infinite;margin:0 auto 16px}
   </style>
 </head>
 <body>
+  <div class="conn-overlay" id="connOverlay"><div class="conn-box"><div class="conn-spin"></div><p id="connMsg" style="font-size:15px;font-weight:700">Checking connection...</p></div></div>
   <div class="ach-toast" id="ach-toast"><div class="ach-toast-icon" id="ach-toast-icon">🎯</div><div class="ach-toast-text"><div class="ach-toast-title" id="ach-toast-title">Achievement Unlocked!</div><div class="ach-toast-desc" id="ach-toast-desc">First Victory</div></div></div>
   <div class="lt" onclick="toggleLD()">🌐</div>
   <div class="ld" id="ld">
@@ -408,11 +418,13 @@
     let pendingUsername = null;
     try {
       if (typeof firebase !== 'undefined' && typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.apiKey) {
-        firebase.initializeApp(FIREBASE_CONFIG);
+        if (!firebase.apps.length) {
+          firebase.initializeApp(FIREBASE_CONFIG);
+        }
         fbAuth = firebase.auth();
         console.log('🔥 Firebase client ready');
       }
-    } catch(e) { console.log('Firebase client not configured'); }
+    } catch(e) { console.log('Firebase client error:', e.message); }
     const useFirebase = !!fbAuth;
 
     function sTab(tab){document.getElementById('lf').style.display=tab==='login'?'block':'none';document.getElementById('rf').style.display=tab==='register'?'block':'none';document.getElementById('tl').className='tab'+(tab==='login'?' al':'');document.getElementById('tr').className='tab'+(tab==='register'?' ar':'')}
@@ -1022,101 +1034,101 @@
 
     // All achievements definition
     const ALL_ACHS=[
-      {b:'🎯',t:'First Victory',d:'1 maç kazan',c:(w,l,tr,total,en,er,eb,best)=>w>=1},
-      {b:'✊',t:'Başlangıç',d:'3 maç kazan',c:(w)=>w>=3},
-      {b:'⭐',t:'Yıldız Aday',d:'5 maç kazan',c:(w)=>w>=5},
-      {b:'🏆',t:'10 Galibiyet',d:'10 maç kazan',c:(w)=>w>=10},
-      {b:'🔥',t:'Ateş Topçu',d:'15 maç kazan',c:(w)=>w>=15},
-      {b:'💪',t:'Güçlü Rakip',d:'25 maç kazan',c:(w)=>w>=25},
-      {b:'⚔️',t:'Savaşçı',d:'50 maç kazan',c:(w)=>w>=50},
-      {b:'🛡️',t:'Kalkan',d:'75 maç kazan',c:(w)=>w>=75},
-      {b:'👑',t:'Yüz Galibiyet',d:'100 maç kazan',c:(w)=>w>=100},
-      {b:'🌟',t:'Süper Yıldız',d:'150 maç kazan',c:(w)=>w>=150},
-      {b:'💎',t:'Elmas Savaşçı',d:'200 maç kazan',c:(w)=>w>=200},
-      {b:'🔱',t:'Trident',d:'250 maç kazan',c:(w)=>w>=250},
-      {b:'🏅',t:'Altın Madalya',d:'300 maç kazan',c:(w)=>w>=300},
-      {b:'⚡',t:'Şimşek',d:'400 maç kazan',c:(w)=>w>=400},
-      {b:'🐉',t:'Ejderha',d:'500 maç kazan',c:(w)=>w>=500},
-      {b:'🦁',t:'Aslan Yürekli',d:'750 maç kazan',c:(w)=>w>=750},
-      {b:'👾',t:'Bin Galibiyet',d:'1000 maç kazan',c:(w)=>w>=1000},
-      {b:'🌋',t:'Volkan',d:'2000 maç kazan',c:(w)=>w>=2000},
-      {b:'☄️',t:'Meteor',d:'5000 maç kazan',c:(w)=>w>=5000},
-      {b:'🌌',t:'Galaktik',d:'10000 maç kazan',c:(w)=>w>=10000},
-      {b:'🎮',t:'İlk Maç',d:'1 maç oyna',c:(w,l,tr,total)=>total>=1},
-      {b:'🎲',t:'Oyuncu',d:'10 maç oyna',c:(w,l,tr,total)=>total>=10},
-      {b:'🃏',t:'Kartçı',d:'25 maç oyna',c:(w,l,tr,total)=>total>=25},
-      {b:'🎪',t:'Arena Sakini',d:'50 maç oyna',c:(w,l,tr,total)=>total>=50},
-      {b:'🏟️',t:'Veteran',d:'100 maç oyna',c:(w,l,tr,total)=>total>=100},
-      {b:'📜',t:'Deneyimli',d:'200 maç oyna',c:(w,l,tr,total)=>total>=200},
-      {b:'🧭',t:'Pusula',d:'300 maç oyna',c:(w,l,tr,total)=>total>=300},
-      {b:'🗿',t:'Antik',d:'500 maç oyna',c:(w,l,tr,total)=>total>=500},
-      {b:'⏳',t:'Zamansız',d:'750 maç oyna',c:(w,l,tr,total)=>total>=750},
-      {b:'📖',t:'Efsane Oyuncu',d:'1000 maç oyna',c:(w,l,tr,total)=>total>=1000},
-      {b:'🏛️',t:'İmparator',d:'2000 maç oyna',c:(w,l,tr,total)=>total>=2000},
-      {b:'🔮',t:'Kahin',d:'3000 maç oyna',c:(w,l,tr,total)=>total>=3000},
-      {b:'🌠',t:'Yıldız Tozu',d:'5000 maç oyna',c:(w,l,tr,total)=>total>=5000},
-      {b:'🪐',t:'Gezegen',d:'7500 maç oyna',c:(w,l,tr,total)=>total>=7500},
-      {b:'🌍',t:'Dünya Şampiyonu',d:'10000 maç oyna',c:(w,l,tr,total)=>total>=10000},
-      {b:'📈',t:'Yükseliş',d:'1550 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=1550},
-      {b:'🎖️',t:'Yetenekli',d:'1600 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=1600},
-      {b:'🏹',t:'Okçu',d:'1650 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=1650},
-      {b:'🗡️',t:'Kılıç Ustası',d:'1700 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=1700},
-      {b:'⚜️',t:'Soylu',d:'1800 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=1800},
-      {b:'🏰',t:'Kale',d:'1850 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=1850},
-      {b:'🎭',t:'Stratejist',d:'1900 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=1900},
-      {b:'🔬',t:'Analist',d:'1950 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=1950},
-      {b:'💫',t:'2000 Kulübü',d:'2000 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=2000},
-      {b:'🧠',t:'Deha',d:'2100 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=2100},
-      {b:'🦅',t:'Kartal',d:'2200 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=2200},
-      {b:'🐺',t:'Kurt',d:'2300 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=2300},
-      {b:'🦈',t:'Köpekbalığı',d:'2400 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=2400},
-      {b:'🐲',t:'Ejder Lord',d:'2500 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=2500},
-      {b:'🌪️',t:'Kasırga',d:'2750 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=2750},
-      {b:'☀️',t:'Güneş',d:'3000 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=3000},
-      {b:'🌙',t:'Ay Tanrısı',d:'3500 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=3500},
-      {b:'💀',t:'Ölümsüz',d:'4000 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=4000},
-      {b:'🕳️',t:'Kara Delik',d:'5000 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=5000},
-      {b:'🥉',t:'Bronz Başlangıç',d:'50 trophies',c:(w,l,tr)=>tr>=50},
-      {b:'🎀',t:'Koleksiyoncu',d:'100 trophies',c:(w,l,tr)=>tr>=100},
-      {b:'🏵️',t:'Rozet',d:'200 trophies',c:(w,l,tr)=>tr>=200},
-      {b:'🎗️',t:'Şerit',d:'350 trophies',c:(w,l,tr)=>tr>=350},
-      {b:'🥈',t:'Gümüş Lig',d:'500 trophies',c:(w,l,tr)=>tr>=500},
-      {b:'🪙',t:'Altın Yolu',d:'750 trophies',c:(w,l,tr)=>tr>=750},
-      {b:'💰',t:'Hazine',d:'1000 trophies',c:(w,l,tr)=>tr>=1000},
-      {b:'💳',t:'Platin',d:'1500 trophies',c:(w,l,tr)=>tr>=1500},
-      {b:'🥇',t:'Altın Lig',d:'2000 trophies',c:(w,l,tr)=>tr>=2000},
-      {b:'🏆',t:'Şampiyon',d:'3000 trophies',c:(w,l,tr)=>tr>=3000},
-      {b:'👸',t:'Kraliçe',d:'5000 trophies',c:(w,l,tr)=>tr>=5000},
-      {b:'🤴',t:'Kral',d:'7500 trophies',c:(w,l,tr)=>tr>=7500},
-      {b:'💎',t:'Elmas Lig',d:'10000 trophies',c:(w,l,tr)=>tr>=10000},
-      {b:'🔷',t:'Safir',d:'15000 trophies',c:(w,l,tr)=>tr>=15000},
-      {b:'❤️‍🔥',t:'Yakut',d:'25000 trophies',c:(w,l,tr)=>tr>=25000},
-      {b:'🪩',t:'Disko Topu',d:'50000 trophies',c:(w,l,tr)=>tr>=50000},
-      {b:'⭐',t:'Mega Yıldız',d:'75000 trophies',c:(w,l,tr)=>tr>=75000},
-      {b:'🔥',t:'Efsane Lig',d:'100000 trophies',c:(w,l,tr)=>tr>=100000},
-      {b:'🌈',t:'Gökkuşağı',d:'250000 trophies',c:(w,l,tr)=>tr>=250000},
-      {b:'🏔️',t:'Everest',d:'500000 trophies',c:(w,l,tr)=>tr>=500000},
-      {b:'📊',t:'%60 Oran',d:'10+ maç %60 kazanma',c:(w,l,tr,total)=>total>=10&&w/total>=0.6},
-      {b:'🎯',t:'Keskin Nişancı',d:'20+ maç %70 kazanma',c:(w,l,tr,total)=>total>=20&&w/total>=0.7},
-      {b:'🏹',t:'%75 Efsane',d:'30+ maç %75 kazanma',c:(w,l,tr,total)=>total>=30&&w/total>=0.75},
-      {b:'🔫',t:'%80 Silahşör',d:'50+ maç %80 kazanma',c:(w,l,tr,total)=>total>=50&&w/total>=0.8},
-      {b:'💣',t:'%85 Bomba',d:'50+ maç %85 kazanma',c:(w,l,tr,total)=>total>=50&&w/total>=0.85},
-      {b:'☢️',t:'%90 Nükleer',d:'100+ maç %90 kazanma',c:(w,l,tr,total)=>total>=100&&w/total>=0.9},
-      {b:'🛡️',t:'Yenilmez',d:'50+ maç 0 yenilgi',c:(w,l,tr,total)=>total>=50&&l===0},
-      {b:'⚡',t:'Tanrı Modu',d:'100+ maç 0 yenilgi',c:(w,l,tr,total)=>total>=100&&l===0},
-      {b:'🌐',t:'Her Modda İyi',d:'Tüm modlar 1600+',c:(w,l,tr,total,en,er,eb)=>en>=1600&&er>=1600&&eb>=1600},
-      {b:'🌍',t:'Global Usta',d:'Tüm modlar 1800+',c:(w,l,tr,total,en,er,eb)=>en>=1800&&er>=1800&&eb>=1800},
-      {b:'🪐',t:'Evrensel',d:'Tüm modlar 2000+',c:(w,l,tr,total,en,er,eb)=>en>=2000&&er>=2000&&eb>=2000},
-      {b:'💔',t:'Azimli',d:'10 yenilgi — pes etme',c:(w,l)=>l>=10},
-      {b:'🩹',t:'Dayanıklı',d:'50 yenilgi — hala burada',c:(w,l)=>l>=50},
-      {b:'🗻',t:'Dağ Gibi',d:'100 yenilgi — yıkılmaz',c:(w,l)=>l>=100},
-      {b:'⚖️',t:'Dominant',d:'10+ maç 2x galibiyet',c:(w,l,tr,total)=>total>=10&&w>=l*2},
-      {b:'🏋️',t:'Ezici Üstünlük',d:'20+ maç 3x galibiyet',c:(w,l,tr,total)=>total>=20&&w>=l*3},
-      {b:'🦸',t:'Süper Kahraman',d:'50+ maç 5x galibiyet',c:(w,l,tr,total)=>total>=50&&w>=l*5},
-      {b:'⚡',t:'Blitz Ustası',d:'Blitz 1700+',c:(w,l,tr,total,en,er,eb)=>eb>=1700},
-      {b:'🔥',t:'Rapid Ustası',d:'Rapid 1700+',c:(w,l,tr,total,en,er,eb)=>er>=1700},
-      {b:'🎮',t:'Normal Ustası',d:'Normal 1700+',c:(w,l,tr,total,en,er,eb)=>en>=1700},
-      {b:'🏛️',t:'Efsanevi Usta',d:'2000+ ELO & 100+ maç',c:(w,l,tr,total,en,er,eb,best)=>best>=2000&&total>=100},
+      {b:'🎯',t:'First Victory',d:'Win 1 game',c:(w,l,tr,total,en,er,eb,best)=>w>=1},
+      {b:'✊',t:'Getting Started',d:'Win 3 games',c:(w)=>w>=3},
+      {b:'⭐',t:'Rising Star',d:'Win 5 games',c:(w)=>w>=5},
+      {b:'🏆',t:'Ten Wins',d:'Win 10 games',c:(w)=>w>=10},
+      {b:'🔥',t:'On Fire',d:'Win 15 games',c:(w)=>w>=15},
+      {b:'💪',t:'Tough Opponent',d:'Win 25 games',c:(w)=>w>=25},
+      {b:'⚔️',t:'Warrior',d:'Win 50 games',c:(w)=>w>=50},
+      {b:'🛡️',t:'Shield',d:'Win 75 games',c:(w)=>w>=75},
+      {b:'👑',t:'Hundred Wins',d:'Win 100 games',c:(w)=>w>=100},
+      {b:'🌟',t:'Superstar',d:'Win 150 games',c:(w)=>w>=150},
+      {b:'💎',t:'Diamond Warrior',d:'Win 200 games',c:(w)=>w>=200},
+      {b:'🔱',t:'Trident',d:'Win 250 games',c:(w)=>w>=250},
+      {b:'🏅',t:'Gold Medal',d:'Win 300 games',c:(w)=>w>=300},
+      {b:'⚡',t:'Lightning',d:'Win 400 games',c:(w)=>w>=400},
+      {b:'🐉',t:'Dragon',d:'Win 500 games',c:(w)=>w>=500},
+      {b:'🦁',t:'Lionheart',d:'Win 750 games',c:(w)=>w>=750},
+      {b:'👾',t:'Thousand Wins',d:'Win 1000 games',c:(w)=>w>=1000},
+      {b:'🌋',t:'Volcano',d:'Win 2000 games',c:(w)=>w>=2000},
+      {b:'☄️',t:'Meteor',d:'Win 5000 games',c:(w)=>w>=5000},
+      {b:'🌌',t:'Galactic',d:'Win 10000 games',c:(w)=>w>=10000},
+      {b:'🎮',t:'First Game',d:'Play 1 game',c:(w,l,tr,total)=>total>=1},
+      {b:'🎲',t:'Player',d:'Play 10 games',c:(w,l,tr,total)=>total>=10},
+      {b:'🃏',t:'Card Player',d:'Play 25 games',c:(w,l,tr,total)=>total>=25},
+      {b:'🎪',t:'Arena Regular',d:'Play 50 games',c:(w,l,tr,total)=>total>=50},
+      {b:'🏟️',t:'Veteran',d:'Play 100 games',c:(w,l,tr,total)=>total>=100},
+      {b:'📜',t:'Experienced',d:'Play 200 games',c:(w,l,tr,total)=>total>=200},
+      {b:'🧭',t:'Compass',d:'Play 300 games',c:(w,l,tr,total)=>total>=300},
+      {b:'🗿',t:'Ancient',d:'Play 500 games',c:(w,l,tr,total)=>total>=500},
+      {b:'⏳',t:'Timeless',d:'Play 750 games',c:(w,l,tr,total)=>total>=750},
+      {b:'📖',t:'Legendary Player',d:'Play 1000 games',c:(w,l,tr,total)=>total>=1000},
+      {b:'🏛️',t:'Emperor',d:'Play 2000 games',c:(w,l,tr,total)=>total>=2000},
+      {b:'🔮',t:'Oracle',d:'Play 3000 games',c:(w,l,tr,total)=>total>=3000},
+      {b:'🌠',t:'Stardust',d:'Play 5000 games',c:(w,l,tr,total)=>total>=5000},
+      {b:'🪐',t:'Planet',d:'Play 7500 games',c:(w,l,tr,total)=>total>=7500},
+      {b:'🌍',t:'World Champion',d:'Play 10000 games',c:(w,l,tr,total)=>total>=10000},
+      {b:'📈',t:'Rising',d:'Reach 1550 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=1550},
+      {b:'🎖️',t:'Talented',d:'Reach 1600 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=1600},
+      {b:'🏹',t:'Archer',d:'Reach 1650 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=1650},
+      {b:'🗡️',t:'Swordmaster',d:'Reach 1700 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=1700},
+      {b:'⚜️',t:'Noble',d:'Reach 1800 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=1800},
+      {b:'🏰',t:'Castle',d:'Reach 1850 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=1850},
+      {b:'🎭',t:'Strategist',d:'Reach 1900 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=1900},
+      {b:'🔬',t:'Analyst',d:'Reach 1950 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=1950},
+      {b:'💫',t:'2000 Club',d:'Reach 2000 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=2000},
+      {b:'🧠',t:'Genius',d:'Reach 2100 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=2100},
+      {b:'🦅',t:'Eagle',d:'Reach 2200 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=2200},
+      {b:'🐺',t:'Wolf',d:'Reach 2300 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=2300},
+      {b:'🦈',t:'Shark',d:'Reach 2400 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=2400},
+      {b:'🐲',t:'Dragon Lord',d:'Reach 2500 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=2500},
+      {b:'🌪️',t:'Hurricane',d:'Reach 2750 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=2750},
+      {b:'☀️',t:'Sun',d:'Reach 3000 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=3000},
+      {b:'🌙',t:'Moon God',d:'Reach 3500 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=3500},
+      {b:'💀',t:'Immortal',d:'Reach 4000 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=4000},
+      {b:'🕳️',t:'Black Hole',d:'Reach 5000 ELO',c:(w,l,tr,total,en,er,eb,best)=>best>=5000},
+      {b:'🥉',t:'Bronze Start',d:'Earn 50 trophies',c:(w,l,tr)=>tr>=50},
+      {b:'🎀',t:'Collector',d:'Earn 100 trophies',c:(w,l,tr)=>tr>=100},
+      {b:'🏵️',t:'Badge',d:'Earn 200 trophies',c:(w,l,tr)=>tr>=200},
+      {b:'🎗️',t:'Ribbon',d:'Earn 350 trophies',c:(w,l,tr)=>tr>=350},
+      {b:'🥈',t:'Silver League',d:'Earn 500 trophies',c:(w,l,tr)=>tr>=500},
+      {b:'🪙',t:'Golden Path',d:'Earn 750 trophies',c:(w,l,tr)=>tr>=750},
+      {b:'💰',t:'Treasure',d:'Earn 1000 trophies',c:(w,l,tr)=>tr>=1000},
+      {b:'💳',t:'Platinum',d:'Earn 1500 trophies',c:(w,l,tr)=>tr>=1500},
+      {b:'🥇',t:'Gold League',d:'Earn 2000 trophies',c:(w,l,tr)=>tr>=2000},
+      {b:'🏆',t:'Champion',d:'Earn 3000 trophies',c:(w,l,tr)=>tr>=3000},
+      {b:'👸',t:'Queen',d:'Earn 5000 trophies',c:(w,l,tr)=>tr>=5000},
+      {b:'🤴',t:'King',d:'Earn 7500 trophies',c:(w,l,tr)=>tr>=7500},
+      {b:'💎',t:'Diamond League',d:'Earn 10000 trophies',c:(w,l,tr)=>tr>=10000},
+      {b:'🔷',t:'Sapphire',d:'Earn 15000 trophies',c:(w,l,tr)=>tr>=15000},
+      {b:'❤️‍🔥',t:'Ruby',d:'Earn 25000 trophies',c:(w,l,tr)=>tr>=25000},
+      {b:'🪩',t:'Disco Ball',d:'Earn 50000 trophies',c:(w,l,tr)=>tr>=50000},
+      {b:'⭐',t:'Mega Star',d:'Earn 75000 trophies',c:(w,l,tr)=>tr>=75000},
+      {b:'🔥',t:'Legend League',d:'Earn 100000 trophies',c:(w,l,tr)=>tr>=100000},
+      {b:'🌈',t:'Rainbow',d:'Earn 250000 trophies',c:(w,l,tr)=>tr>=250000},
+      {b:'🏔️',t:'Everest',d:'Earn 500000 trophies',c:(w,l,tr)=>tr>=500000},
+      {b:'📊',t:'60% Rate',d:'60%+ win rate (10+ games)',c:(w,l,tr,total)=>total>=10&&w/total>=0.6},
+      {b:'🎯',t:'Sharpshooter',d:'70%+ win rate (20+ games)',c:(w,l,tr,total)=>total>=20&&w/total>=0.7},
+      {b:'🏹',t:'75% Legend',d:'75%+ win rate (30+ games)',c:(w,l,tr,total)=>total>=30&&w/total>=0.75},
+      {b:'🔫',t:'80% Gunslinger',d:'80%+ win rate (50+ games)',c:(w,l,tr,total)=>total>=50&&w/total>=0.8},
+      {b:'💣',t:'85% Bomb',d:'85%+ win rate (50+ games)',c:(w,l,tr,total)=>total>=50&&w/total>=0.85},
+      {b:'☢️',t:'90% Nuclear',d:'90%+ win rate (100+ games)',c:(w,l,tr,total)=>total>=100&&w/total>=0.9},
+      {b:'🛡️',t:'Undefeated',d:'50+ games with 0 losses',c:(w,l,tr,total)=>total>=50&&l===0},
+      {b:'⚡',t:'God Mode',d:'100+ games with 0 losses',c:(w,l,tr,total)=>total>=100&&l===0},
+      {b:'🌐',t:'All-Rounder',d:'All modes 1600+',c:(w,l,tr,total,en,er,eb)=>en>=1600&&er>=1600&&eb>=1600},
+      {b:'🌍',t:'Global Master',d:'All modes 1800+',c:(w,l,tr,total,en,er,eb)=>en>=1800&&er>=1800&&eb>=1800},
+      {b:'🪐',t:'Universal',d:'All modes 2000+',c:(w,l,tr,total,en,er,eb)=>en>=2000&&er>=2000&&eb>=2000},
+      {b:'💔',t:'Determined',d:'10 losses — never give up',c:(w,l)=>l>=10},
+      {b:'🩹',t:'Resilient',d:'50 losses — still here',c:(w,l)=>l>=50},
+      {b:'🗻',t:'Mountain',d:'100 losses — unbreakable',c:(w,l)=>l>=100},
+      {b:'⚖️',t:'Dominant',d:'2x win ratio (10+ games)',c:(w,l,tr,total)=>total>=10&&w>=l*2},
+      {b:'🏋️',t:'Crushing',d:'3x win ratio (20+ games)',c:(w,l,tr,total)=>total>=20&&w>=l*3},
+      {b:'🦸',t:'Superhero',d:'5x win ratio (50+ games)',c:(w,l,tr,total)=>total>=50&&w>=l*5},
+      {b:'⚡',t:'Blitz Master',d:'Blitz ELO 1700+',c:(w,l,tr,total,en,er,eb)=>eb>=1700},
+      {b:'🔥',t:'Rapid Master',d:'Rapid ELO 1700+',c:(w,l,tr,total,en,er,eb)=>er>=1700},
+      {b:'🎮',t:'Normal Master',d:'Normal ELO 1700+',c:(w,l,tr,total,en,er,eb)=>en>=1700},
+      {b:'🏛️',t:'Legendary Master',d:'2000+ ELO & 100+ games',c:(w,l,tr,total,en,er,eb,best)=>best>=2000&&total>=100},
     ];
     function getAchievements(){
       if(!U) return ALL_ACHS.map(a=>({...a,locked:true}));
@@ -1172,7 +1184,7 @@
       // Progress card — separate container
       document.getElementById('achProgress').innerHTML=`<div style="background:linear-gradient(135deg,rgba(255,215,0,.08),rgba(255,215,0,.02));border:1px solid rgba(255,215,0,.2);border-radius:16px;padding:16px;display:flex;align-items:center;gap:14px">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--gold);line-height:1">${unlocked.length}<span style="font-size:18px;color:var(--dim)">/${total}</span></div>
-        <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:6px">BAŞARIM İLERLEMESİ — %${pct}</div><div style="height:8px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#cd7f32,var(--gold),#ffe44d);border-radius:99px;transition:width .5s"></div></div></div>
+        <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:6px">ACHIEVEMENT PROGRESS — %${pct}</div><div style="height:8px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#cd7f32,var(--gold),#ffe44d);border-radius:99px;transition:width .5s"></div></div></div>
       </div>`;
       // Unlocked achievements — grid
       document.getElementById('achList').innerHTML=unlocked.map(x=>`<div class="ach-item unlocked"><div class="ach-icon">${x.b}</div><div class="ach-info"><div class="ach-name">${x.t}</div><div class="ach-desc">${x.d}</div></div></div>`).join('')||'<div style="color:var(--dim);font-size:13px;padding:8px">'+t('no_achieve')+'</div>';
@@ -1181,7 +1193,7 @@
       if(locked.length>0){
         document.getElementById('achNext').innerHTML=`<div style="background:linear-gradient(135deg,rgba(128,128,160,.08),rgba(128,128,160,.02));border:1px solid rgba(128,128,160,.15);border-radius:14px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px">
           <div style="font-size:18px">🎯</div>
-          <div style="font-size:12px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:1.5px">Sıradaki Hedefler</div>
+          <div style="font-size:12px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:1.5px">Next Goals</div>
         </div><div style="display:flex;flex-wrap:wrap;gap:8px">`+locked.map(x=>`<div class="ach-item locked"><div class="ach-icon">❓</div><div class="ach-info"><div class="ach-name" style="color:var(--dim)">${x.t}</div><div class="ach-desc">${x.d}</div></div></div>`).join('')+`</div>`;
       } else {
         document.getElementById('achNext').innerHTML='';
@@ -1255,7 +1267,48 @@
       renderGoogleButton();
       const tk=localStorage.getItem('gl_token');
       if(tk){cS();sS('home-screen')} else sS('auth-screen');
+      // Connection monitoring
+      startConnMonitor();
+      // Immersive mode for Android
+      if(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.StatusBar){
+        try{window.Capacitor.Plugins.StatusBar.hide()}catch(e){}
+      }
     });
+
+    // Connection monitor
+    let connCheckInterval=null;
+    function startConnMonitor(){
+      // Check on socket disconnect
+      S.on('disconnect',()=>{
+        showConnOverlay('Connection lost. Returning to menu...');
+        setTimeout(()=>{
+          hideConnOverlay();
+          if(GR){leaveG()}
+          sS(localStorage.getItem('gl_token')?'home-screen':'auth-screen');
+        },3000);
+      });
+      S.on('connect',()=>{hideConnOverlay();cS()});
+      // Periodic check
+      connCheckInterval=setInterval(()=>{
+        if(!navigator.onLine){
+          showConnOverlay('No internet connection');
+          if(GR){setTimeout(()=>{leaveG();sS('home-screen')},2000)}
+        }
+      },5000);
+      // Slow connection check on game start
+      window.addEventListener('offline',()=>{
+        showConnOverlay('Connection lost');
+        setTimeout(()=>{hideConnOverlay();if(GR)leaveG();sS(localStorage.getItem('gl_token')?'home-screen':'auth-screen')},3000);
+      });
+      window.addEventListener('online',()=>{hideConnOverlay();cS()});
+    }
+    function showConnOverlay(msg){
+      document.getElementById('connMsg').textContent=msg;
+      document.getElementById('connOverlay').classList.add('show');
+    }
+    function hideConnOverlay(){
+      document.getElementById('connOverlay').classList.remove('show');
+    }
   </script>
 </body>
 </html>
