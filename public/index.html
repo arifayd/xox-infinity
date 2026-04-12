@@ -397,13 +397,11 @@
     let pendingUsername = null;
     try {
       if (typeof firebase !== 'undefined' && typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.apiKey) {
-        if (!firebase.apps.length) {
-          firebase.initializeApp(FIREBASE_CONFIG);
-        }
+        firebase.initializeApp(FIREBASE_CONFIG);
         fbAuth = firebase.auth();
         console.log('🔥 Firebase client ready');
       }
-    } catch(e) { console.error('Firebase init error:', e.message); }
+    } catch(e) { console.log('Firebase client not configured'); }
     const useFirebase = !!fbAuth;
 
     function sTab(tab){document.getElementById('lf').style.display=tab==='login'?'block':'none';document.getElementById('rf').style.display=tab==='register'?'block':'none';document.getElementById('tl').className='tab'+(tab==='login'?' al':'');document.getElementById('tr').className='tab'+(tab==='register'?' ar':'')}
@@ -492,8 +490,8 @@
       if(!container) return;
       
       if(isCapacitor){
-        // Android: native Google Sign-In
-        container.innerHTML=`<button onclick="nativeGoogleSignIn()" style="width:100%;padding:14px;border:1px solid var(--bd);border-radius:14px;background:var(--s);color:var(--tx);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"><span data-t="google_login">Sign in with Google</span></button>`;
+        // Android: show custom button, open popup page
+        container.innerHTML=`<button onclick="openGooglePopup()" style="width:100%;padding:14px;border:1px solid var(--bd);border-radius:14px;background:var(--s);color:var(--tx);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"><span data-t="google_login">Google ile Giriş Yap</span></button>`;
         return;
       }
       
@@ -514,24 +512,21 @@
       });
     }
     
-    // Android: native Google Sign-In via Capacitor plugin
-    async function nativeGoogleSignIn(){
+    // Android: open Google auth in popup window
+    function openGooglePopup(){
+      const popup = window.open('/auth/google-popup', 'google_auth', 'width=500,height=600');
+      if(!popup){alert('Popup engellenmiş. Lütfen popup izni ver.');return;}
+    }
+    
+    // Listen for message from popup
+    window.addEventListener('message', async function(e){
+      if(!e.data || e.data.type !== 'google-auth') return;
+      const {idToken, displayName} = e.data;
       try{
-        const GoogleAuth = window.Capacitor.Plugins.GoogleAuth;
-        if(!GoogleAuth){alert('GoogleAuth plugin not found');return;}
-        const result = await GoogleAuth.signIn();
-        const idToken = result.authentication.idToken;
-        const displayName = result.name || result.email.split('@')[0];
-        if(!idToken){alert('Google token failed');return;}
-        // Firebase credential
-        const cred = firebase.auth.GoogleAuthProvider.credential(idToken);
-        const fbResult = await fbAuth.signInWithCredential(cred);
-        const firebaseToken = await fbResult.user.getIdToken();
-        // Send to server
         const r = await fetch('/api/auth/firebase', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({idToken: firebaseToken, username: displayName, language: L})
+          body: JSON.stringify({idToken, username: displayName, language: L})
         });
         const d = await r.json();
         if(d.success){
@@ -539,11 +534,8 @@
           if(d.isNewUser){document.getElementById('unameDisplay').textContent=U.username;sS('username-screen')}
           else{sS('home-screen');uH()}
         } else alert(d.error);
-      }catch(e){
-        console.error('Google sign in error:', e);
-        alert('Google error: '+(e.message||JSON.stringify(e)));
-      }
-    }
+      }catch(err){alert('Sunucu hatası: '+err.message)}
+    });
     
     async function onGoogleCredential(response){
       if(!response || !response.credential){alert('Google credential boş döndü');return}
