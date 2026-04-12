@@ -544,34 +544,39 @@
       });
     }
     
-    // Android: open Google auth in Capacitor Browser + polling
+    // Android: open Google auth in Capacitor Browser + polling + deep link
     let googleAuthPollTimer = null;
+    let currentAuthSid = null;
+    
     function openGooglePopup(){
       const sid = Math.random().toString(36).substr(2, 12);
-      const authUrl = '/auth/google-popup?sid=' + sid;
+      currentAuthSid = sid;
+      const baseUrl = location.origin;
+      const authUrl = baseUrl + '/auth/google-popup?sid=' + sid;
       
       // Capacitor Browser plugin varsa onu kullan
       if(isCapacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser){
-        window.Capacitor.Plugins.Browser.open({ url: location.origin + authUrl });
+        window.Capacitor.Plugins.Browser.open({ url: authUrl });
         
-        // browserFinished event'ini dinle
+        // Browser kapandığında polling'i biraz daha hızlandır
         window.Capacitor.Plugins.Browser.addListener('browserFinished', () => {
-          // Tarayıcı kapandı, polling devam edecek
+          console.log('Browser closed, checking auth result...');
         });
       } else {
-        // Fallback: window.open
+        // Fallback: window.open (web için)
         const popup = window.open(authUrl, 'google_auth', 'width=500,height=600');
         if(!popup){alert('Popup engellenmiş. Lütfen popup izni ver.');return;}
       }
       
-      // Polling: sunucudan auth sonucunu bekle
+      // Polling: sunucudan auth sonucunu bekle (her 1.5 saniye)
       let attempts = 0;
       if(googleAuthPollTimer) clearInterval(googleAuthPollTimer);
       googleAuthPollTimer = setInterval(async () => {
         attempts++;
-        if(attempts > 120){ // 2 dakika timeout
+        if(attempts > 80){ // 2 dakika timeout
           clearInterval(googleAuthPollTimer);
           googleAuthPollTimer = null;
+          currentAuthSid = null;
           return;
         }
         try{
@@ -580,13 +585,40 @@
           if(d.ready){
             clearInterval(googleAuthPollTimer);
             googleAuthPollTimer = null;
+            currentAuthSid = null;
             // Browser'ı kapat
             try{ if(isCapacitor && window.Capacitor.Plugins.Browser) window.Capacitor.Plugins.Browser.close(); }catch(e){}
-            // Auth sonucunu işle (aynı postMessage handler gibi)
+            // Auth sonucunu işle
             handleGoogleAuthResult(d.idToken, d.displayName);
           }
         }catch(e){}
-      }, 1000);
+      }, 1500);
+    }
+    
+    // Capacitor deep link listener (auth-callback)
+    if(isCapacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App){
+      window.Capacitor.Plugins.App.addListener('appUrlOpen', async (data) => {
+        console.log('Deep link received:', data.url);
+        if(data.url && data.url.includes('auth-callback')){
+          // Browser'ı kapat
+          try{ window.Capacitor.Plugins.Browser.close(); }catch(e){}
+          // URL'den sid'i al
+          const url = new URL(data.url);
+          const sid = url.searchParams.get('sid');
+          if(sid){
+            // Sunucudan sonucu al
+            try{
+              const r = await fetch('/auth/google-result?sid=' + sid);
+              const d = await r.json();
+              if(d.ready){
+                if(googleAuthPollTimer){ clearInterval(googleAuthPollTimer); googleAuthPollTimer = null; }
+                currentAuthSid = null;
+                handleGoogleAuthResult(d.idToken, d.displayName);
+              }
+            }catch(e){ console.error('Deep link auth error:', e); }
+          }
+        }
+      });
     }
     
     async function handleGoogleAuthResult(idToken, displayName){
