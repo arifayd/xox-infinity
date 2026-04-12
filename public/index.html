@@ -544,10 +544,65 @@
       });
     }
     
-    // Android: open Google auth in popup window
+    // Android: open Google auth in Capacitor Browser + polling
+    let googleAuthPollTimer = null;
     function openGooglePopup(){
-      const popup = window.open('/auth/google-popup', 'google_auth', 'width=500,height=600');
-      if(!popup){alert('Popup engellenmiş. Lütfen popup izni ver.');return;}
+      const sid = Math.random().toString(36).substr(2, 12);
+      const authUrl = '/auth/google-popup?sid=' + sid;
+      
+      // Capacitor Browser plugin varsa onu kullan
+      if(isCapacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser){
+        window.Capacitor.Plugins.Browser.open({ url: location.origin + authUrl });
+        
+        // browserFinished event'ini dinle
+        window.Capacitor.Plugins.Browser.addListener('browserFinished', () => {
+          // Tarayıcı kapandı, polling devam edecek
+        });
+      } else {
+        // Fallback: window.open
+        const popup = window.open(authUrl, 'google_auth', 'width=500,height=600');
+        if(!popup){alert('Popup engellenmiş. Lütfen popup izni ver.');return;}
+      }
+      
+      // Polling: sunucudan auth sonucunu bekle
+      let attempts = 0;
+      if(googleAuthPollTimer) clearInterval(googleAuthPollTimer);
+      googleAuthPollTimer = setInterval(async () => {
+        attempts++;
+        if(attempts > 120){ // 2 dakika timeout
+          clearInterval(googleAuthPollTimer);
+          googleAuthPollTimer = null;
+          return;
+        }
+        try{
+          const r = await fetch('/auth/google-result?sid=' + sid);
+          const d = await r.json();
+          if(d.ready){
+            clearInterval(googleAuthPollTimer);
+            googleAuthPollTimer = null;
+            // Browser'ı kapat
+            try{ if(isCapacitor && window.Capacitor.Plugins.Browser) window.Capacitor.Plugins.Browser.close(); }catch(e){}
+            // Auth sonucunu işle (aynı postMessage handler gibi)
+            handleGoogleAuthResult(d.idToken, d.displayName);
+          }
+        }catch(e){}
+      }, 1000);
+    }
+    
+    async function handleGoogleAuthResult(idToken, displayName){
+      try{
+        const r = await fetch('/api/auth/firebase', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({idToken, username: displayName, language: L})
+        });
+        const d = await r.json();
+        if(d.success){
+          localStorage.setItem('gl_token', d.token);U=d.user;cS();
+          if(d.isNewUser){document.getElementById('unameDisplay').textContent=U.username;sS('username-screen')}
+          else{sS('home-screen');uH()}
+        } else alert(d.error);
+      }catch(err){alert('Sunucu hatası: '+err.message)}
     }
     
     // Listen for message from popup

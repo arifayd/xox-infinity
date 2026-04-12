@@ -87,10 +87,90 @@ const apiLimiter = rateLimit({
 
 app.use('/api/auth/', authLimiter);
 app.use('/api/', apiLimiter);
+
+// ── Tarayıcıdan doğrudan erişimi engelle, sadece Capacitor uygulamasına izin ver ──
+app.use((req, res, next) => {
+  // Socket.io, API ve auth callback'leri her zaman izin ver
+  if (req.path.startsWith('/socket.io') || 
+      req.path.startsWith('/api/') || 
+      req.path.startsWith('/auth/')) {
+    return next();
+  }
+  
+  const ua = req.headers['user-agent'] || '';
+  
+  // Capacitor WebView'ı tanı (Android: wv flag, iOS: Mobile Safari ama CriOS yok)
+  const isCapacitorApp = ua.includes('xoxarena') || // Capacitor custom UA
+                          (ua.includes('Android') && ua.includes('wv')) || // Android WebView
+                          (ua.includes('iPhone') && !ua.includes('CriOS') && !ua.includes('FxiOS')); // iOS WebView
+  
+  // Development modunda her zaman izin ver
+  const isDev = process.env.NODE_ENV !== 'production';
+  
+  if (isDev || isCapacitorApp) {
+    return next();
+  }
+  
+  // Tarayıcıdan girenlere bilgi sayfası göster
+  if (req.path === '/' || req.path === '/index.html') {
+    return res.send(`<!DOCTYPE html><html><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>XOX Arena</title>
+<style>body{background:#0a0a12;color:#f0f0f8;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center}
+.box{padding:40px;max-width:400px}h1{font-size:32px;margin-bottom:16px}p{color:#8080a0;line-height:1.6;margin-bottom:24px}
+.btn{display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#4cc9f0,#22b8e0);color:#0a0a12;border-radius:14px;text-decoration:none;font-weight:800;font-size:16px}
+</style></head><body><div class="box">
+<h1>⚔️ XOX Arena</h1>
+<p>Bu oyun mobil uygulama olarak tasarlanmıştır. Oynamak için uygulamayı indirin!</p>
+<a class="btn" href="https://play.google.com/store/apps/details?id=com.xoxarena.app">Google Play'den İndir</a>
+</div></body></html>`);
+  }
+  
+  // Diğer static dosyalara (JS, CSS vs) izin ver — uygulama bunlara ihtiyaç duyar
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Google OAuth popup page for Android WebView
+// ── FIREBASE CLIENT CONFIG (dosyadan oku, env yoksa fallback) ──
+let firebaseClientConfig = {
+  apiKey: process.env.FIREBASE_API_KEY || '',
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN || ''
+};
+try {
+  const configPath = path.join(__dirname, 'public', 'firebase-config.js');
+  if (fs.existsSync(configPath)) {
+    const configText = fs.readFileSync(configPath, 'utf8');
+    // JSON-ish parse: key: "value" formatını yakala
+    const getVal = (key) => {
+      const m = configText.match(new RegExp(key + '\\s*:\\s*["\']([^"\']+)["\']'));
+      return m ? m[1] : '';
+    };
+    if (!firebaseClientConfig.apiKey) firebaseClientConfig.apiKey = getVal('apiKey');
+    if (!firebaseClientConfig.authDomain) firebaseClientConfig.authDomain = getVal('authDomain');
+    if (firebaseClientConfig.apiKey) console.log('✅ Firebase client config dosyadan okundu');
+  }
+} catch(e) { console.log('⚠️ firebase-config.js okunamadı:', e.message); }
+
+// ── Google Auth: Geçici token deposu (Capacitor redirect akışı için) ──
+const pendingGoogleAuths = new Map(); // sessionId -> { idToken, displayName, ts }
+
+// Temizlik: 5 dk'dan eski olanları sil
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of pendingGoogleAuths) {
+    if (now - v.ts > 5 * 60 * 1000) pendingGoogleAuths.delete(k);
+  }
+}, 60 * 1000);
+
+// Google OAuth sayfası — Capacitor in-app browser'da açılacak
 app.get('/auth/google-popup', (req, res) => {
+  const sessionId = req.query.sid || '';
+  const clientConfig = JSON.stringify({
+    apiKey: firebaseClientConfig.apiKey,
+    authDomain: firebaseClientConfig.authDomain
+  });
+  
   res.send(`<!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -99,41 +179,92 @@ app.get('/auth/google-popup', (req, res) => {
 .box{text-align:center;padding:40px}.spin{border:4px solid #333;border-top:4px solid #4cc9f0;border-radius:50%;width:40px;height:40px;animation:s 1s linear infinite;margin:20px auto}@keyframes s{to{transform:rotate(360deg)}}</style>
 </head><body><div class="box"><div class="spin"></div><p>Google hesabına yönlendiriliyorsun...</p></div>
 <script>
-const fc = ${JSON.stringify({apiKey: process.env.FIREBASE_API_KEY || '', authDomain: process.env.FIREBASE_AUTH_DOMAIN || ''})};
-// Try to get config from opener
-let config = fc;
-try { if(window.opener && window.opener.FIREBASE_CONFIG) config = window.opener.FIREBASE_CONFIG; } catch(e){}
-// Fallback: fetch from firebase-config.js
-if(!config.apiKey){
-  fetch('/firebase-config.js').then(r=>r.text()).then(t=>{
-    try{eval(t); if(typeof FIREBASE_CONFIG!=='undefined') config=FIREBASE_CONFIG;} catch(e){}
-    startAuth();
-  }).catch(()=>startAuth());
-} else { startAuth(); }
+const config = ${clientConfig};
+const sid = '${sessionId}';
 
-function startAuth(){
-  if(!config.apiKey){document.querySelector('p').textContent='Firebase yapılandırma hatası';return;}
-  const app = firebase.initializeApp(config, 'popup');
+if(!config.apiKey){
+  document.querySelector('p').textContent='Firebase yapılandırma hatası';
+} else {
+  const app = firebase.initializeApp(config, 'authpage');
   const auth = firebase.auth(app);
-  const provider = new firebase.auth.GoogleAuthProvider();
-  provider.setCustomParameters({prompt:'select_account'});
-  auth.signInWithPopup(provider).then(async result=>{
-    const idToken = await result.user.getIdToken();
-    const displayName = result.user.displayName || result.user.email.split('@')[0];
-    try{
-      if(window.opener){
-        window.opener.postMessage({type:'google-auth',idToken:idToken,displayName:displayName},'*');
-        setTimeout(()=>window.close(),500);
-      }
-    }catch(e){
-      document.querySelector('p').textContent='Giriş başarılı! Bu pencereyi kapatabilirsin.';
+  
+  // Önce redirect sonucunu kontrol et (redirect'ten dönüş)
+  auth.getRedirectResult().then(async result => {
+    if(result && result.user){
+      const idToken = await result.user.getIdToken();
+      const displayName = result.user.displayName || result.user.email.split('@')[0];
+      await sendResult(idToken, displayName);
+    } else {
+      // İlk açılış — redirect başlat
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({prompt:'select_account'});
+      auth.signInWithRedirect(provider);
     }
-  }).catch(e=>{
-    document.querySelector('p').textContent='Hata: '+e.message;
-    setTimeout(()=>{try{window.close()}catch(e){}},3000);
+  }).catch(e => {
+    // Redirect hata verirse popup dene
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({prompt:'select_account'});
+    auth.signInWithPopup(provider).then(async result => {
+      const idToken = await result.user.getIdToken();
+      const displayName = result.user.displayName || result.user.email.split('@')[0];
+      await sendResult(idToken, displayName);
+    }).catch(e2 => {
+      document.querySelector('p').textContent='Hata: '+e2.message;
+    });
   });
 }
+
+async function sendResult(idToken, displayName){
+  document.querySelector('.spin').style.display='none';
+  document.querySelector('p').textContent='Giriş başarılı! Yönlendiriliyorsun...';
+  
+  // 1) Sonucu postMessage ile gönder (web popup için)
+  try{
+    if(window.opener){
+      window.opener.postMessage({type:'google-auth',idToken,displayName},'*');
+      setTimeout(()=>window.close(),500);
+      return;
+    }
+  }catch(e){}
+  
+  // 2) Capacitor: sonucu sunucuya kaydet, ana uygulama polling ile alacak
+  if(sid){
+    try{
+      await fetch('/auth/google-callback',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({sid,idToken,displayName})
+      });
+      document.querySelector('p').textContent='Giriş başarılı! Uygulamaya dönebilirsin.';
+    }catch(e){
+      document.querySelector('p').textContent='Hata: sunucuya gönderilemedi';
+    }
+  } else {
+    document.querySelector('p').textContent='Giriş başarılı! Bu pencereyi kapatabilirsin.';
+  }
+}
 </script></body></html>`);
+});
+
+// Capacitor callback: popup sayfası auth sonucunu buraya POST eder
+app.post('/auth/google-callback', (req, res) => {
+  const { sid, idToken, displayName } = req.body;
+  if (!sid || !idToken) return res.json({ success: false });
+  pendingGoogleAuths.set(sid, { idToken, displayName, ts: Date.now() });
+  res.json({ success: true });
+});
+
+// Capacitor polling: ana uygulama auth sonucunu buradan alır
+app.get('/auth/google-result', (req, res) => {
+  const sid = req.query.sid;
+  if (!sid) return res.json({ ready: false });
+  const data = pendingGoogleAuths.get(sid);
+  if (data) {
+    pendingGoogleAuths.delete(sid);
+    res.json({ ready: true, idToken: data.idToken, displayName: data.displayName });
+  } else {
+    res.json({ ready: false });
+  }
 });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'xox-infinity-secret-change-in-production';
