@@ -567,8 +567,7 @@ app.post('/api/auth/guest', (req, res) => {
     };
 
     if (usePostgreSQL) {
-      // Guest kullanıcılar veritabanına kaydedilmez — sadece oturum bazlı
-      guestUser.id = `guest_${guestNum}`;
+      // PostgreSQL insert would go here
     } else {
       db.users.push(guestUser);
       saveJSONDB();
@@ -632,7 +631,7 @@ app.get('/api/leaderboard/elo', async (req, res) => {
     let users;
     if (usePostgreSQL) {
       const result = await pgPool.query(
-        `SELECT id, username, elo_normal, elo_rapid, elo_blitz, wins, losses, trophies, avatar FROM users WHERE "isGuest" IS NOT TRUE ORDER BY ${eloField} DESC LIMIT $1`,
+        `SELECT id, username, elo_normal, elo_rapid, elo_blitz, wins, losses, trophies, avatar FROM users ORDER BY ${eloField} DESC LIMIT $1`,
         [limit]
       );
       users = result.rows;
@@ -1145,11 +1144,10 @@ async function endRoom(roomId, winnerSymbol, reason) {
   
   if (winner && loser) {
     const isFriendly = room.isFriendly || false;
-    const isGuestGame = (winner.isGuest || loser.isGuest);
-    const eloChange = (isFriendly || isGuestGame) ? {winner: 0, loser: 0} : calculateEloChange(winner.elo, loser.elo, reason === 'draw');
+    const eloChange = isFriendly ? {winner: 0, loser: 0} : calculateEloChange(winner.elo, loser.elo, reason === 'draw');
     const eloField = room.gameMode === 'rapid' ? 'elo_rapid' : (room.gameMode === 'blitz' ? 'elo_blitz' : 'elo_normal');
 
-    if (!isFriendly && !isGuestGame) {
+    if (!isFriendly) {
     if (usePostgreSQL) {
       await pgPool.query(
         `UPDATE users SET ${eloField} = ${eloField} + $1, wins = wins + 1, trophies = trophies + 30 WHERE id = $2`,
@@ -1197,7 +1195,7 @@ async function endRoom(roomId, winnerSymbol, reason) {
       db.matches.push(match);
       saveJSONDB();
     }
-    } // end if(!isFriendly && !isGuestGame)
+    } // end if(!isFriendly)
     
     io.to(roomId).emit('game_ended', {
       roomId,
@@ -1207,7 +1205,7 @@ async function endRoom(roomId, winnerSymbol, reason) {
       reason,
       eloChange,
       duration,
-      isFriendly: isFriendly || isGuestGame,
+      isFriendly: isFriendly,
     });
   }
   
