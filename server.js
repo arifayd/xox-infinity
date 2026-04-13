@@ -88,18 +88,17 @@ const apiLimiter = rateLimit({
 app.use('/api/auth/', authLimiter);
 app.use('/api/', apiLimiter);
 
-// ── Masaüstü tarayıcılardan doğrudan erişimi engelle ──
+// ── Masaüstü tarayıcı engeli (sadece ana sayfa) ──
 app.use((req, res, next) => {
   if (req.path !== '/' && req.path !== '/index.html') return next();
   if (process.env.NODE_ENV !== 'production') return next();
   const ua = req.headers['user-agent'] || '';
-  const isDesktop = !ua.includes('Mobile') && !ua.includes('Android') && !ua.includes('iPhone');
-  if (isDesktop) {
+  if (!ua.includes('Mobile') && !ua.includes('Android') && !ua.includes('iPhone')) {
     return res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>XOX Arena</title>
 <style>body{background:#0a0a12;color:#f0f0f8;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center}
 .box{padding:40px;max-width:400px}h1{font-size:32px;margin-bottom:16px}p{color:#8080a0;line-height:1.6;margin-bottom:24px}
 .btn{display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#4cc9f0,#22b8e0);color:#0a0a12;border-radius:14px;text-decoration:none;font-weight:800;font-size:16px}</style>
-</head><body><div class="box"><h1>⚔️ XOX Arena</h1><p>Bu oyun mobil uygulama olarak tasarlanmıştır. Oynamak için uygulamayı indirin!</p>
+</head><body><div class="box"><h1>⚔️ XOX Arena</h1><p>Bu oyun mobil uygulama olarak tasarlanmıştır.</p>
 <a class="btn" href="https://play.google.com/store/apps/details?id=com.xoxarena.app">Google Play'den İndir</a></div></body></html>`);
   }
   next();
@@ -107,24 +106,22 @@ app.use((req, res, next) => {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── Firebase client config'i dosyadan oku (popup rotası için) ──
-let firebaseClientConfig = { apiKey: process.env.FIREBASE_API_KEY || '', authDomain: process.env.FIREBASE_AUTH_DOMAIN || '' };
+// ── Firebase config'i dosyadan oku (popup rotası için) ──
+let _fbClientCfg = { apiKey: process.env.FIREBASE_API_KEY || '', authDomain: process.env.FIREBASE_AUTH_DOMAIN || '' };
 try {
-  const cfgPath = path.join(__dirname, 'public', 'firebase-config.js');
-  if (fs.existsSync(cfgPath)) {
-    const cfgText = fs.readFileSync(cfgPath, 'utf8');
-    const gv = (k) => { const m = cfgText.match(new RegExp(k + '\\s*:\\s*["\']([^"\']+)["\']')); return m ? m[1] : ''; };
-    if (!firebaseClientConfig.apiKey) firebaseClientConfig.apiKey = gv('apiKey');
-    if (!firebaseClientConfig.authDomain) firebaseClientConfig.authDomain = gv('authDomain');
+  const _cfgPath = path.join(__dirname, 'public', 'firebase-config.js');
+  if (fs.existsSync(_cfgPath)) {
+    const _cfgText = fs.readFileSync(_cfgPath, 'utf8');
+    const _gv = (k) => { const m = _cfgText.match(new RegExp(k + '\\s*:\\s*["\']([^"\']+)["\']')); return m ? m[1] : ''; };
+    if (!_fbClientCfg.apiKey) _fbClientCfg.apiKey = _gv('apiKey');
+    if (!_fbClientCfg.authDomain) _fbClientCfg.authDomain = _gv('authDomain');
   }
 } catch(e) {}
 
 // Google OAuth popup page for Android WebView
 app.get('/auth/google-popup', (req, res) => {
-  const clientConfig = JSON.stringify({
-    apiKey: firebaseClientConfig.apiKey,
-    authDomain: firebaseClientConfig.authDomain
-  });
+  // Config'i server-side inject et — window.opener sorununu bypass eder
+  const _cc = JSON.stringify({ apiKey: _fbClientCfg.apiKey, authDomain: _fbClientCfg.authDomain });
   res.send(`<!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -133,7 +130,7 @@ app.get('/auth/google-popup', (req, res) => {
 .box{text-align:center;padding:40px}.spin{border:4px solid #333;border-top:4px solid #4cc9f0;border-radius:50%;width:40px;height:40px;animation:s 1s linear infinite;margin:20px auto}@keyframes s{to{transform:rotate(360deg)}}</style>
 </head><body><div class="box"><div class="spin"></div><p>Google hesabına yönlendiriliyorsun...</p></div>
 <script>
-const config = ${clientConfig};
+const config = ${_cc};
 if(!config.apiKey){
   document.querySelector('p').textContent='Firebase yapılandırma hatası';
 } else {
@@ -569,6 +566,48 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// ── GUEST LOGIN ───────────────────────────────────────────
+app.post('/api/auth/guest', (req, res) => {
+  try {
+    const { language } = req.body || {};
+    const guestNum = Math.floor(1000 + Math.random() * 9000);
+    const username = `Guest_${guestNum}`;
+
+    const guestUser = {
+      id: usePostgreSQL ? null : (db.users.length + 1),
+      username,
+      isGuest: true,
+      trophies: 0,
+      elo: 1500, elo_normal: 1500, elo_rapid: 1500, elo_blitz: 1500,
+      wins: 0, losses: 0, draws: 0,
+      language: language || 'tr',
+      avatar: '👤',
+      clan_id: null,
+      is_admin: false, is_banned: false,
+      created_at: new Date().toISOString()
+    };
+
+    if (usePostgreSQL) {
+      // PostgreSQL insert would go here
+    } else {
+      db.users.push(guestUser);
+      saveJSONDB();
+    }
+
+    const token = jwt.sign(
+      { isGuest: true, username, userId: guestUser.id },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    console.log(`[GUEST] ${username} (id: ${guestUser.id})`);
+    res.json({ success: true, token, user: guestUser, isGuest: true });
+  } catch (error) {
+    console.error('Guest login error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ── CHANGE USERNAME ──────────────────────────────────────
 app.post('/api/auth/change-username', async (req, res) => {
   try {
@@ -619,6 +658,7 @@ app.get('/api/leaderboard/elo', async (req, res) => {
       users = result.rows;
     } else {
       users = db.users
+        .filter(u => !u.isGuest)
         .map(({ password, password_hash, ...u }) => u)
         .sort((a, b) => {
           return (b[eloField]||1500) - (a[eloField]||1500);
@@ -640,12 +680,13 @@ app.get('/api/leaderboard/trophies', async (req, res) => {
     let users;
     if (usePostgreSQL) {
       const result = await pgPool.query(
-        'SELECT id, username, trophies, wins, losses, avatar FROM users ORDER BY trophies DESC LIMIT $1',
+        'SELECT id, username, trophies, wins, losses, avatar FROM users WHERE "isGuest" IS NOT TRUE ORDER BY trophies DESC LIMIT $1',
         [limit]
       );
       users = result.rows;
     } else {
       users = db.users
+        .filter(u => !u.isGuest)
         .map(({ password, password_hash, ...u }) => u)
         .sort((a, b) => b.trophies - a.trophies)
         .slice(0, limit);
@@ -1023,8 +1064,8 @@ function createRoom(p1Socket, p2Socket, gameMode = 'normal', isFriendly = false)
     id: roomId,
     gameMode,
     players: [
-      { socketId: p1Socket.id, userId: p1.userId, username: p1.username, elo: p1[eloField] || p1.elo || 1500, symbol: p1Symbol },
-      { socketId: p2Socket.id, userId: p2.userId, username: p2.username, elo: p2[eloField] || p2.elo || 1500, symbol: p2Symbol },
+      { socketId: p1Socket.id, userId: p1.userId, username: p1.username, elo: p1[eloField] || p1.elo || 1500, symbol: p1Symbol, isGuest: p1.isGuest || false },
+      { socketId: p2Socket.id, userId: p2.userId, username: p2.username, elo: p2[eloField] || p2.elo || 1500, symbol: p2Symbol, isGuest: p2.isGuest || false },
     ],
     board: Array(9).fill(null),
     xQueue: [],
@@ -1126,7 +1167,7 @@ async function endRoom(roomId, winnerSymbol, reason) {
     const isFriendly = room.isFriendly || false;
     const eloChange = isFriendly ? {winner: 0, loser: 0} : calculateEloChange(winner.elo, loser.elo, reason === 'draw');
     const eloField = room.gameMode === 'rapid' ? 'elo_rapid' : (room.gameMode === 'blitz' ? 'elo_blitz' : 'elo_normal');
-    
+
     if (!isFriendly) {
     if (usePostgreSQL) {
       await pgPool.query(
@@ -1207,16 +1248,37 @@ io.on('connection', (socket) => {
   socket.on('auth', async ({ token }) => {
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
-      
+
+      // Misafir giriş
+      if (decoded.isGuest) {
+        players[socket.id] = {
+          userId: `guest_${socket.id}`,
+          username: decoded.username,
+          elo: 1500,
+          elo_normal: 1500,
+          elo_rapid: 1500,
+          elo_blitz: 1500,
+          language: 'tr',
+          roomId: null,
+          lastSymbol: null,
+          isGuest: true
+        };
+        socket.emit('auth_success', {
+          user: { username: decoded.username, isGuest: true, elo: 1500, avatar: '👤' }
+        });
+        console.log(`[AUTH GUEST] ${decoded.username}`);
+        return;
+      }
+
       const user = usePostgreSQL
         ? (await pgPool.query('SELECT * FROM users WHERE id = $1', [decoded.userId])).rows[0]
         : db.users.find(u => u.id === decoded.userId);
-      
+
       if (!user || user.is_banned) {
         socket.emit('auth_error', { error: 'User not found or banned' });
         return;
       }
-      
+
       players[socket.id] = {
         userId: user.id,
         username: user.username,
@@ -1226,9 +1288,10 @@ io.on('connection', (socket) => {
         elo_blitz: user.elo_blitz || 1500,
         language: user.language,
         roomId: null,
-        lastSymbol: null
+        lastSymbol: null,
+        isGuest: false
       };
-      
+
       socket.emit('auth_success', { user });
       console.log(`[AUTH] ${user.username} (${user.elo} elo)`);
     } catch (error) {
