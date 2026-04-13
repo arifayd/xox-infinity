@@ -88,183 +88,76 @@ const apiLimiter = rateLimit({
 app.use('/api/auth/', authLimiter);
 app.use('/api/', apiLimiter);
 
-// ── Tarayıcıdan doğrudan erişimi engelle, sadece mobil uygulamaya izin ver ──
+// ── Masaüstü tarayıcılardan doğrudan erişimi engelle ──
 app.use((req, res, next) => {
-  // Sadece ana sayfa (/) ve index.html'i kontrol et — diğer her şeye izin ver
-  if (req.path !== '/' && req.path !== '/index.html') {
-    return next();
-  }
-  
-  // Development modunda her zaman izin ver
-  if (process.env.NODE_ENV !== 'production') {
-    return next();
-  }
-  
+  if (req.path !== '/' && req.path !== '/index.html') return next();
+  if (process.env.NODE_ENV !== 'production') return next();
   const ua = req.headers['user-agent'] || '';
-  
-  // Masaüstü tarayıcıları engelle — mobil cihazlara izin ver
-  const isDesktopBrowser = !ua.includes('Mobile') && !ua.includes('Android') && !ua.includes('iPhone');
-  
-  // Bilinen masaüstü tarayıcılar (Chrome, Firefox, Safari, Edge — mobil olmayan)
-  const isRegularBrowser = (ua.includes('Chrome') || ua.includes('Firefox') || ua.includes('Safari') || ua.includes('Edge')) 
-                           && !ua.includes('Mobile') && !ua.includes('Android') && !ua.includes('wv');
-  
-  if (isDesktopBrowser || isRegularBrowser) {
-    return res.send(`<!DOCTYPE html><html><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>XOX Arena</title>
+  const isDesktop = !ua.includes('Mobile') && !ua.includes('Android') && !ua.includes('iPhone');
+  if (isDesktop) {
+    return res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>XOX Arena</title>
 <style>body{background:#0a0a12;color:#f0f0f8;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center}
 .box{padding:40px;max-width:400px}h1{font-size:32px;margin-bottom:16px}p{color:#8080a0;line-height:1.6;margin-bottom:24px}
-.btn{display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#4cc9f0,#22b8e0);color:#0a0a12;border-radius:14px;text-decoration:none;font-weight:800;font-size:16px}
-</style></head><body><div class="box">
-<h1>⚔️ XOX Arena</h1>
-<p>Bu oyun mobil uygulama olarak tasarlanmıştır. Oynamak için uygulamayı indirin!</p>
-<a class="btn" href="https://play.google.com/store/apps/details?id=com.xoxarena.app">Google Play'den İndir</a>
-</div></body></html>`);
+.btn{display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#4cc9f0,#22b8e0);color:#0a0a12;border-radius:14px;text-decoration:none;font-weight:800;font-size:16px}</style>
+</head><body><div class="box"><h1>⚔️ XOX Arena</h1><p>Bu oyun mobil uygulama olarak tasarlanmıştır. Oynamak için uygulamayı indirin!</p>
+<a class="btn" href="https://play.google.com/store/apps/details?id=com.xoxarena.app">Google Play'den İndir</a></div></body></html>`);
   }
-  
   next();
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── FIREBASE CLIENT CONFIG (dosyadan oku, env yoksa fallback) ──
-let firebaseClientConfig = {
-  apiKey: process.env.FIREBASE_API_KEY || '',
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN || ''
-};
+// ── Firebase client config'i dosyadan oku (popup rotası için) ──
+let firebaseClientConfig = { apiKey: process.env.FIREBASE_API_KEY || '', authDomain: process.env.FIREBASE_AUTH_DOMAIN || '' };
 try {
-  const configPath = path.join(__dirname, 'public', 'firebase-config.js');
-  if (fs.existsSync(configPath)) {
-    const configText = fs.readFileSync(configPath, 'utf8');
-    // JSON-ish parse: key: "value" formatını yakala
-    const getVal = (key) => {
-      const m = configText.match(new RegExp(key + '\\s*:\\s*["\']([^"\']+)["\']'));
-      return m ? m[1] : '';
-    };
-    if (!firebaseClientConfig.apiKey) firebaseClientConfig.apiKey = getVal('apiKey');
-    if (!firebaseClientConfig.authDomain) firebaseClientConfig.authDomain = getVal('authDomain');
-    if (firebaseClientConfig.apiKey) console.log('✅ Firebase client config dosyadan okundu');
+  const cfgPath = path.join(__dirname, 'public', 'firebase-config.js');
+  if (fs.existsSync(cfgPath)) {
+    const cfgText = fs.readFileSync(cfgPath, 'utf8');
+    const gv = (k) => { const m = cfgText.match(new RegExp(k + '\\s*:\\s*["\']([^"\']+)["\']')); return m ? m[1] : ''; };
+    if (!firebaseClientConfig.apiKey) firebaseClientConfig.apiKey = gv('apiKey');
+    if (!firebaseClientConfig.authDomain) firebaseClientConfig.authDomain = gv('authDomain');
   }
-} catch(e) { console.log('⚠️ firebase-config.js okunamadı:', e.message); }
+} catch(e) {}
 
-// ── Google Auth: Geçici token deposu (Capacitor redirect akışı için) ──
-const pendingGoogleAuths = new Map(); // sessionId -> { idToken, displayName, ts }
-
-// Temizlik: 5 dk'dan eski olanları sil
-setInterval(() => {
-  const now = Date.now();
-  for (const [k, v] of pendingGoogleAuths) {
-    if (now - v.ts > 5 * 60 * 1000) pendingGoogleAuths.delete(k);
-  }
-}, 60 * 1000);
-
-// Google OAuth sayfası — signInWithRedirect kullan, sid localStorage'da sakla
+// Google OAuth popup page for Android WebView
 app.get('/auth/google-popup', (req, res) => {
-  const sessionId = req.query.sid || '';
   const clientConfig = JSON.stringify({
     apiKey: firebaseClientConfig.apiKey,
     authDomain: firebaseClientConfig.authDomain
   });
-  
   res.send(`<!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <style>body{background:#0a0a12;color:#f0f0f8;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
 .box{text-align:center;padding:40px}.spin{border:4px solid #333;border-top:4px solid #4cc9f0;border-radius:50%;width:40px;height:40px;animation:s 1s linear infinite;margin:20px auto}@keyframes s{to{transform:rotate(360deg)}}</style>
-</head><body><div class="box"><div class="spin" id="spinner"></div><p id="status">Google hesabına yönlendiriliyorsun...</p></div>
+</head><body><div class="box"><div class="spin"></div><p>Google hesabına yönlendiriliyorsun...</p></div>
 <script>
 const config = ${clientConfig};
-const urlSid = '${sessionId}';
-const statusEl = document.getElementById('status');
-const spinnerEl = document.getElementById('spinner');
-
-// sid'i localStorage'da sakla (redirect sonrası URL parametreleri kaybolur)
-if(urlSid) localStorage.setItem('auth_sid', urlSid);
-const sid = localStorage.getItem('auth_sid') || urlSid;
-
 if(!config.apiKey){
-  statusEl.textContent='Firebase yapılandırma hatası';
-  spinnerEl.style.display='none';
+  document.querySelector('p').textContent='Firebase yapılandırma hatası';
 } else {
-  const app = firebase.initializeApp(config, 'authpage');
+  const app = firebase.initializeApp(config, 'popup');
   const auth = firebase.auth(app);
-  
-  // Önce redirect sonucunu kontrol et
-  auth.getRedirectResult().then(async result => {
-    if(result && result.user){
-      // Redirect'ten dönüş — auth başarılı!
-      const idToken = await result.user.getIdToken();
-      const displayName = result.user.displayName || result.user.email.split('@')[0];
-      
-      spinnerEl.style.display='none';
-      statusEl.textContent='Giriş başarılı! Uygulamaya dönülüyor...';
-      
-      // Sonucu sunucuya kaydet
-      if(sid){
-        try{
-          await fetch('/auth/google-callback', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({sid, idToken, displayName})
-          });
-        }catch(e){ console.error('Callback POST error:', e); }
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({prompt:'select_account'});
+  auth.signInWithPopup(provider).then(async result=>{
+    const idToken = await result.user.getIdToken();
+    const displayName = result.user.displayName || result.user.email.split('@')[0];
+    try{
+      if(window.opener){
+        window.opener.postMessage({type:'google-auth',idToken:idToken,displayName:displayName},'*');
+        setTimeout(()=>window.close(),500);
       }
-      
-      // localStorage temizle
-      localStorage.removeItem('auth_sid');
-      
-      // postMessage dene (web popup için)
-      try{
-        if(window.opener){
-          window.opener.postMessage({type:'google-auth', idToken, displayName},'*');
-          setTimeout(()=>window.close(), 500);
-          return;
-        }
-      }catch(e){}
-      
-      // In-app browser'da: kullanıcıya mesaj göster, polling halledecek
-      statusEl.textContent='Giriş başarılı! Bu sayfayı kapatabilirsin.';
-      
-    } else if(urlSid) {
-      // İlk açılış — redirect başlat
-      const provider = new firebase.auth.GoogleAuthProvider();
-      provider.setCustomParameters({prompt:'select_account'});
-      auth.signInWithRedirect(provider);
-    } else {
-      // sid yok, urlSid yok — muhtemelen doğrudan açılmış
-      statusEl.textContent='Hata: Oturum bilgisi bulunamadı.';
-      spinnerEl.style.display='none';
+    }catch(e){
+      document.querySelector('p').textContent='Giriş başarılı! Bu pencereyi kapatabilirsin.';
     }
-  }).catch(e => {
-    console.error('Redirect error:', e);
-    statusEl.textContent='Hata: ' + e.message;
-    spinnerEl.style.display='none';
+  }).catch(e=>{
+    document.querySelector('p').textContent='Hata: '+e.message;
+    setTimeout(()=>{try{window.close()}catch(e){}},3000);
   });
 }
 </script></body></html>`);
-});
-
-// Capacitor callback: popup sayfası auth sonucunu buraya POST eder
-app.post('/auth/google-callback', (req, res) => {
-  const { sid, idToken, displayName } = req.body;
-  if (!sid || !idToken) return res.json({ success: false });
-  pendingGoogleAuths.set(sid, { idToken, displayName, ts: Date.now() });
-  res.json({ success: true });
-});
-
-// Capacitor polling: ana uygulama auth sonucunu buradan alır
-app.get('/auth/google-result', (req, res) => {
-  const sid = req.query.sid;
-  if (!sid) return res.json({ ready: false });
-  const data = pendingGoogleAuths.get(sid);
-  if (data) {
-    pendingGoogleAuths.delete(sid);
-    res.json({ ready: true, idToken: data.idToken, displayName: data.displayName });
-  } else {
-    res.json({ ready: false });
-  }
 });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'xox-infinity-secret-change-in-production';
@@ -676,48 +569,6 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// ── GUEST LOGIN ───────────────────────────────────────────
-app.post('/api/auth/guest', (req, res) => {
-  try {
-    const { language } = req.body || {};
-    const guestNum = Math.floor(1000 + Math.random() * 9000);
-    const username = `Guest_${guestNum}`;
-
-    const guestUser = {
-      id: usePostgreSQL ? null : (db.users.length + 1),
-      username,
-      isGuest: true,
-      trophies: 0,
-      elo: 1500, elo_normal: 1500, elo_rapid: 1500, elo_blitz: 1500,
-      wins: 0, losses: 0, draws: 0,
-      language: language || 'tr',
-      avatar: '👤',
-      clan_id: null,
-      is_admin: false, is_banned: false,
-      created_at: new Date().toISOString()
-    };
-
-    if (usePostgreSQL) {
-      // PostgreSQL insert would go here
-    } else {
-      db.users.push(guestUser);
-      saveJSONDB();
-    }
-
-    const token = jwt.sign(
-      { isGuest: true, username, userId: guestUser.id },
-      JWT_SECRET,
-      { expiresIn: '30d' }
-    );
-
-    console.log(`[GUEST] ${username} (id: ${guestUser.id})`);
-    res.json({ success: true, token, user: guestUser, isGuest: true });
-  } catch (error) {
-    console.error('Guest login error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
 // ── CHANGE USERNAME ──────────────────────────────────────
 app.post('/api/auth/change-username', async (req, res) => {
   try {
@@ -768,7 +619,6 @@ app.get('/api/leaderboard/elo', async (req, res) => {
       users = result.rows;
     } else {
       users = db.users
-        .filter(u => !u.isGuest)
         .map(({ password, password_hash, ...u }) => u)
         .sort((a, b) => {
           return (b[eloField]||1500) - (a[eloField]||1500);
@@ -790,13 +640,12 @@ app.get('/api/leaderboard/trophies', async (req, res) => {
     let users;
     if (usePostgreSQL) {
       const result = await pgPool.query(
-        'SELECT id, username, trophies, wins, losses, avatar FROM users WHERE "isGuest" IS NOT TRUE ORDER BY trophies DESC LIMIT $1',
+        'SELECT id, username, trophies, wins, losses, avatar FROM users ORDER BY trophies DESC LIMIT $1',
         [limit]
       );
       users = result.rows;
     } else {
       users = db.users
-        .filter(u => !u.isGuest)
         .map(({ password, password_hash, ...u }) => u)
         .sort((a, b) => b.trophies - a.trophies)
         .slice(0, limit);
@@ -1174,8 +1023,8 @@ function createRoom(p1Socket, p2Socket, gameMode = 'normal', isFriendly = false)
     id: roomId,
     gameMode,
     players: [
-      { socketId: p1Socket.id, userId: p1.userId, username: p1.username, elo: p1[eloField] || p1.elo || 1500, symbol: p1Symbol, isGuest: p1.isGuest || false },
-      { socketId: p2Socket.id, userId: p2.userId, username: p2.username, elo: p2[eloField] || p2.elo || 1500, symbol: p2Symbol, isGuest: p2.isGuest || false },
+      { socketId: p1Socket.id, userId: p1.userId, username: p1.username, elo: p1[eloField] || p1.elo || 1500, symbol: p1Symbol },
+      { socketId: p2Socket.id, userId: p2.userId, username: p2.username, elo: p2[eloField] || p2.elo || 1500, symbol: p2Symbol },
     ],
     board: Array(9).fill(null),
     xQueue: [],
@@ -1277,7 +1126,7 @@ async function endRoom(roomId, winnerSymbol, reason) {
     const isFriendly = room.isFriendly || false;
     const eloChange = isFriendly ? {winner: 0, loser: 0} : calculateEloChange(winner.elo, loser.elo, reason === 'draw');
     const eloField = room.gameMode === 'rapid' ? 'elo_rapid' : (room.gameMode === 'blitz' ? 'elo_blitz' : 'elo_normal');
-
+    
     if (!isFriendly) {
     if (usePostgreSQL) {
       await pgPool.query(
@@ -1358,37 +1207,16 @@ io.on('connection', (socket) => {
   socket.on('auth', async ({ token }) => {
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
-
-      // Misafir giriş
-      if (decoded.isGuest) {
-        players[socket.id] = {
-          userId: `guest_${socket.id}`,
-          username: decoded.username,
-          elo: 1500,
-          elo_normal: 1500,
-          elo_rapid: 1500,
-          elo_blitz: 1500,
-          language: 'tr',
-          roomId: null,
-          lastSymbol: null,
-          isGuest: true
-        };
-        socket.emit('auth_success', {
-          user: { username: decoded.username, isGuest: true, elo: 1500, avatar: '👤' }
-        });
-        console.log(`[AUTH GUEST] ${decoded.username}`);
-        return;
-      }
-
+      
       const user = usePostgreSQL
         ? (await pgPool.query('SELECT * FROM users WHERE id = $1', [decoded.userId])).rows[0]
         : db.users.find(u => u.id === decoded.userId);
-
+      
       if (!user || user.is_banned) {
         socket.emit('auth_error', { error: 'User not found or banned' });
         return;
       }
-
+      
       players[socket.id] = {
         userId: user.id,
         username: user.username,
@@ -1398,10 +1226,9 @@ io.on('connection', (socket) => {
         elo_blitz: user.elo_blitz || 1500,
         language: user.language,
         roomId: null,
-        lastSymbol: null,
-        isGuest: false
+        lastSymbol: null
       };
-
+      
       socket.emit('auth_success', { user });
       console.log(`[AUTH] ${user.username} (${user.elo} elo)`);
     } catch (error) {
