@@ -159,7 +159,7 @@ setInterval(() => {
   }
 }, 60 * 1000);
 
-// Google OAuth sayfası — signInWithPopup kullan, sonucu sunucuya POST et
+// Google OAuth sayfası — signInWithRedirect kullan, sid localStorage'da sakla
 app.get('/auth/google-popup', (req, res) => {
   const sessionId = req.query.sid || '';
   const clientConfig = JSON.stringify({
@@ -172,22 +172,17 @@ app.get('/auth/google-popup', (req, res) => {
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <style>body{background:#0a0a12;color:#f0f0f8;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
-.box{text-align:center;padding:40px}.spin{border:4px solid #333;border-top:4px solid #4cc9f0;border-radius:50%;width:40px;height:40px;animation:s 1s linear infinite;margin:20px auto}@keyframes s{to{transform:rotate(360deg)}}
-.btn{margin-top:20px;padding:14px 32px;border:1px solid rgba(255,255,255,.15);border-radius:14px;background:rgba(255,255,255,.05);color:#f0f0f8;font-size:16px;font-weight:700;cursor:pointer;display:none;align-items:center;justify-content:center;gap:10px}
-</style></head><body><div class="box">
-<div class="spin" id="spinner"></div>
-<p id="status">Google hesabına yönlendiriliyorsun...</p>
-<button class="btn" id="retryBtn" onclick="doSignIn()">
-<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20">
-Tekrar Dene
-</button>
-</div>
+.box{text-align:center;padding:40px}.spin{border:4px solid #333;border-top:4px solid #4cc9f0;border-radius:50%;width:40px;height:40px;animation:s 1s linear infinite;margin:20px auto}@keyframes s{to{transform:rotate(360deg)}}</style>
+</head><body><div class="box"><div class="spin" id="spinner"></div><p id="status">Google hesabına yönlendiriliyorsun...</p></div>
 <script>
 const config = ${clientConfig};
-const sid = '${sessionId}';
+const urlSid = '${sessionId}';
 const statusEl = document.getElementById('status');
 const spinnerEl = document.getElementById('spinner');
-const retryBtn = document.getElementById('retryBtn');
+
+// sid'i localStorage'da sakla (redirect sonrası URL parametreleri kaybolur)
+if(urlSid) localStorage.setItem('auth_sid', urlSid);
+const sid = localStorage.getItem('auth_sid') || urlSid;
 
 if(!config.apiKey){
   statusEl.textContent='Firebase yapılandırma hatası';
@@ -196,66 +191,57 @@ if(!config.apiKey){
   const app = firebase.initializeApp(config, 'authpage');
   const auth = firebase.auth(app);
   
-  // Sayfa açılınca hemen sign-in başlat
-  doSignIn();
-  
-  function doSignIn(){
-    statusEl.textContent='Google hesabına yönlendiriliyorsun...';
-    spinnerEl.style.display='block';
-    retryBtn.style.display='none';
-    
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.setCustomParameters({prompt:'select_account'});
-    
-    // signInWithPopup — bu sayfanın kendisi zaten in-app browser'da açık
-    // popup içinde popup açacak, Google hesap seçimi gelecek
-    auth.signInWithPopup(provider).then(async result => {
-      await sendResult(result);
-    }).catch(e => {
-      console.log('Popup failed, trying redirect:', e.message);
-      // Popup başarısız → signInWithCredential ile manuel dene
-      // veya kullanıcıya tekrar dene butonu göster
-      statusEl.textContent='Popup engellenmiş olabilir. Tekrar deneyin.';
+  // Önce redirect sonucunu kontrol et
+  auth.getRedirectResult().then(async result => {
+    if(result && result.user){
+      // Redirect'ten dönüş — auth başarılı!
+      const idToken = await result.user.getIdToken();
+      const displayName = result.user.displayName || result.user.email.split('@')[0];
+      
       spinnerEl.style.display='none';
-      retryBtn.style.display='flex';
-    });
-  }
-  
-  async function sendResult(result){
-    if(!result || !result.user) return;
-    const idToken = await result.user.getIdToken();
-    const displayName = result.user.displayName || result.user.email.split('@')[0];
-    
-    spinnerEl.style.display='none';
-    statusEl.textContent='Giriş başarılı! Yönlendiriliyorsun...';
-    
-    // Sonucu sunucuya kaydet
-    if(sid){
-      try{
-        await fetch('/auth/google-callback', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({sid, idToken, displayName})
-        });
-      }catch(e){ console.error('Callback error:', e); }
-    }
-    
-    // postMessage dene (web popup için)
-    try{
-      if(window.opener){
-        window.opener.postMessage({type:'google-auth', idToken, displayName},'*');
-        setTimeout(()=>window.close(), 500);
-        return;
+      statusEl.textContent='Giriş başarılı! Uygulamaya dönülüyor...';
+      
+      // Sonucu sunucuya kaydet
+      if(sid){
+        try{
+          await fetch('/auth/google-callback', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({sid, idToken, displayName})
+          });
+        }catch(e){ console.error('Callback POST error:', e); }
       }
-    }catch(e){}
-    
-    // Capacitor deep link ile uygulamaya dön
-    statusEl.textContent='Giriş başarılı! Uygulamaya dönülüyor...';
-    setTimeout(() => {
-      // Custom scheme ile uygulamaya dön
-      window.location.href = 'com.xoxarena.app://auth-callback?sid=' + sid;
-    }, 500);
-  }
+      
+      // localStorage temizle
+      localStorage.removeItem('auth_sid');
+      
+      // postMessage dene (web popup için)
+      try{
+        if(window.opener){
+          window.opener.postMessage({type:'google-auth', idToken, displayName},'*');
+          setTimeout(()=>window.close(), 500);
+          return;
+        }
+      }catch(e){}
+      
+      // In-app browser'da: kullanıcıya mesaj göster, polling halledecek
+      statusEl.textContent='Giriş başarılı! Bu sayfayı kapatabilirsin.';
+      
+    } else if(urlSid) {
+      // İlk açılış — redirect başlat
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({prompt:'select_account'});
+      auth.signInWithRedirect(provider);
+    } else {
+      // sid yok, urlSid yok — muhtemelen doğrudan açılmış
+      statusEl.textContent='Hata: Oturum bilgisi bulunamadı.';
+      spinnerEl.style.display='none';
+    }
+  }).catch(e => {
+    console.error('Redirect error:', e);
+    statusEl.textContent='Hata: ' + e.message;
+    spinnerEl.style.display='none';
+  });
 }
 </script></body></html>`);
 });
