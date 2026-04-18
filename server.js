@@ -107,7 +107,7 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Firebase config dosyadan oku ──
-let _fbCfg = { apiKey: process.env.FIREBASE_API_KEY || '', authDomain: process.env.FIREBASE_AUTH_DOMAIN || '' };
+let _fbCfg = { apiKey: process.env.FIREBASE_API_KEY || '', authDomain: process.env.FIREBASE_AUTH_DOMAIN || '', googleClientId: '' };
 try {
   const _p = path.join(__dirname, 'public', 'firebase-config.js');
   if (fs.existsSync(_p)) {
@@ -115,6 +115,7 @@ try {
     const _g = (k) => { const m = _t.match(new RegExp(k + '\\s*:\\s*["\']([^"\']+)["\']')); return m ? m[1] : ''; };
     if (!_fbCfg.apiKey) _fbCfg.apiKey = _g('apiKey');
     if (!_fbCfg.authDomain) _fbCfg.authDomain = _g('authDomain');
+    _fbCfg.googleClientId = _g('googleClientId');
   }
 } catch(e) {}
 
@@ -122,72 +123,92 @@ try {
 const _pendingAuth = new Map();
 setInterval(() => { const n = Date.now(); for (const [k,v] of _pendingAuth) { if (n - v.ts > 300000) _pendingAuth.delete(k); } }, 60000);
 
-// Google OAuth sayfası — signInWithRedirect + sessionStorage flag
+// Google OAuth sayfası — Google Identity Services (popup/redirect yok)
 app.get('/auth/google-popup', (req, res) => {
   const sid = req.query.sid || '';
-  const cc = JSON.stringify({ apiKey: _fbCfg.apiKey, authDomain: _fbCfg.authDomain });
+  const fbConfig = JSON.stringify({ apiKey: _fbCfg.apiKey, authDomain: _fbCfg.authDomain });
+  const clientId = _fbCfg.googleClientId;
+  
   res.send(`<!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<style>body{background:#0a0a12;color:#f0f0f8;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
-.box{text-align:center;padding:40px}.spin{border:4px solid #333;border-top:4px solid #4cc9f0;border-radius:50%;width:40px;height:40px;animation:s 1s linear infinite;margin:20px auto}@keyframes s{to{transform:rotate(360deg)}}</style>
-</head><body><div class="box"><div class="spin" id="sp"></div><p id="st">Google hesabına yönlendiriliyorsun...</p></div>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+body{background:#0a0a12;color:#f0f0f8;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+.box{text-align:center;padding:40px;width:100%;max-width:360px}
+.spin{border:4px solid #333;border-top:4px solid #4cc9f0;border-radius:50%;width:40px;height:40px;animation:s 1s linear infinite;margin:20px auto}
+@keyframes s{to{transform:rotate(360deg)}}
+#gBtn{margin:20px auto;display:flex;justify-content:center}
+</style>
+</head><body><div class="box">
+<div class="spin" id="sp" style="display:none"></div>
+<p id="st" style="margin-bottom:20px">Google ile giriş yap</p>
+<div id="gBtn"></div>
+</div>
 <script>
-var config=${cc};
-var urlSid='${sid}';
+var sid='${sid}';
+var fbConfig=${fbConfig};
+var clientId='${clientId}';
 
-// sid'i sakla (redirect sonrası URL parametreleri kaybolabilir)
-if(urlSid) sessionStorage.setItem('_gsid', urlSid);
-var sid = sessionStorage.getItem('_gsid') || urlSid;
+function waitForGoogle(){
+  if(typeof google!=='undefined' && google.accounts && google.accounts.id){
+    initGIS();
+  } else {
+    setTimeout(waitForGoogle, 200);
+  }
+}
+waitForGoogle();
 
-if(!config.apiKey){
-  document.getElementById('st').textContent='Firebase yapılandırma hatası';
-  document.getElementById('sp').style.display='none';
-} else {
-  var app = firebase.initializeApp(config, 'authpg');
+function initGIS(){
+  google.accounts.id.initialize({
+    client_id: clientId,
+    callback: onCredential,
+    auto_select: false,
+    cancel_on_tap_outside: false
+  });
+  google.accounts.id.renderButton(document.getElementById('gBtn'), {
+    type:'standard', theme:'filled_black', size:'large',
+    text:'signin_with', shape:'pill', width:300
+  });
+}
+
+function onCredential(response){
+  if(!response || !response.credential){ 
+    document.getElementById('st').textContent='Google credential alınamadı'; 
+    return; 
+  }
+  document.getElementById('sp').style.display='block';
+  document.getElementById('st').textContent='Giriş yapılıyor...';
+  document.getElementById('gBtn').style.display='none';
+  
+  // Firebase credential oluştur
+  var app = firebase.initializeApp(fbConfig, 'authpg');
   var auth = firebase.auth(app);
+  var cred = firebase.auth.GoogleAuthProvider.credential(response.credential);
   
-  // Redirect'ten mi dönüyoruz?
-  var wasRedirecting = sessionStorage.getItem('_gauth_pending') === '1';
-  
-  auth.getRedirectResult().then(function(result){
-    if(result && result.user){
-      // Redirect'ten başarılı dönüş!
-      sessionStorage.removeItem('_gauth_pending');
-      sessionStorage.removeItem('_gsid');
-      
-      result.user.getIdToken().then(function(idToken){
-        var displayName = result.user.displayName || result.user.email.split('@')[0];
-        document.getElementById('sp').style.display='none';
-        document.getElementById('st').textContent='Giriş başarılı!';
-        
-        // postMessage dene (web popup için)
-        try{ if(window.opener){ window.opener.postMessage({type:'google-auth',idToken:idToken,displayName:displayName},'*'); setTimeout(function(){window.close()},500); return; } }catch(e){}
-        
-        // Sunucuya kaydet (polling için)
-        if(sid){
-          fetch('/auth/google-callback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:sid,idToken:idToken,displayName:displayName})})
-          .then(function(){ document.getElementById('st').textContent='Giriş başarılı! Bu sayfayı kapatabilirsin.'; })
-          .catch(function(){ document.getElementById('st').textContent='Giriş başarılı! Bu sayfayı kapatabilirsin.'; });
-        }
-      });
-    } else if(!wasRedirecting && sid){
-      // İlk açılış — redirect başlat
-      sessionStorage.setItem('_gauth_pending', '1');
-      var provider = new firebase.auth.GoogleAuthProvider();
-      provider.setCustomParameters({prompt:'select_account'});
-      auth.signInWithRedirect(provider);
-    } else if(wasRedirecting){
-      // Redirect'ten döndük ama result yok — hata
-      sessionStorage.removeItem('_gauth_pending');
-      document.getElementById('sp').style.display='none';
-      document.getElementById('st').textContent='Google girişi başarısız. Tekrar deneyin.';
+  auth.signInWithCredential(cred).then(function(result){
+    return result.user.getIdToken();
+  }).then(function(idToken){
+    var user = firebase.auth(app).currentUser;
+    var displayName = user.displayName || user.email.split('@')[0];
+    
+    document.getElementById('sp').style.display='none';
+    document.getElementById('st').textContent='Giriş başarılı!';
+    
+    // postMessage (web popup için)
+    try{ if(window.opener){ window.opener.postMessage({type:'google-auth',idToken:idToken,displayName:displayName},'*'); setTimeout(function(){window.close()},500); return; } }catch(e){}
+    
+    // Sunucuya kaydet (polling için)
+    if(sid){
+      fetch('/auth/google-callback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:sid,idToken:idToken,displayName:displayName})})
+      .then(function(){ document.getElementById('st').textContent='Giriş başarılı! Bu sayfayı kapatabilirsin.'; })
+      .catch(function(){ document.getElementById('st').textContent='Giriş başarılı! Bu sayfayı kapatabilirsin.'; });
     }
   }).catch(function(e){
-    sessionStorage.removeItem('_gauth_pending');
     document.getElementById('sp').style.display='none';
     document.getElementById('st').textContent='Hata: '+e.message;
+    document.getElementById('gBtn').style.display='flex';
   });
 }
 </script></body></html>`);
