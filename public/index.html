@@ -558,12 +558,12 @@
         window.open(url, 'google_auth', 'width=500,height=600');
       }
       
-      // Polling başlat
+      // Polling başlat (hızlı — 500ms)
       var att = 0;
       if(_authPoll) clearInterval(_authPoll);
       _authPoll = setInterval(function(){
         att++;
-        if(att > 120){ clearInterval(_authPoll); _authPoll = null; return; }
+        if(att > 240){ clearInterval(_authPoll); _authPoll = null; return; }
         fetch('/auth/google-result?sid=' + sid).then(function(r){ return r.json(); }).then(function(d){
           if(d.ready){
             clearInterval(_authPoll); _authPoll = null;
@@ -576,7 +576,7 @@
             }).catch(function(e){alert('Sunucu hatası: '+e.message)});
           }
         }).catch(function(){});
-      }, 1500);
+      }, 500);
     }
     
     // Listen for message from popup

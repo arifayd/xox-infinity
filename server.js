@@ -142,8 +142,8 @@ body{background:#0a0a12;color:#f0f0f8;font-family:sans-serif;display:flex;align-
 #gBtn{margin:20px auto;display:flex;justify-content:center}
 </style>
 </head><body><div class="box">
-<div class="spin" id="sp" style="display:none"></div>
-<p id="st" style="margin-bottom:20px">Google ile giriş yap</p>
+<div class="spin" id="sp"></div>
+<p id="st" style="margin-bottom:20px">Hesap seçici yükleniyor...</p>
 <div id="gBtn"></div>
 </div>
 <script>
@@ -161,15 +161,23 @@ function waitForGoogle(){
 waitForGoogle();
 
 function initGIS(){
+  document.getElementById('sp').style.display='none';
   google.accounts.id.initialize({
     client_id: clientId,
     callback: onCredential,
     auto_select: false,
     cancel_on_tap_outside: false
   });
-  google.accounts.id.renderButton(document.getElementById('gBtn'), {
-    type:'standard', theme:'filled_black', size:'large',
-    text:'signin_with', shape:'pill', width:300
+  // One Tap — otomatik hesap seçici göster
+  google.accounts.id.prompt(function(notification){
+    if(notification.isNotDisplayed() || notification.isSkippedMoment()){
+      // One Tap gösterilemedi → buton göster
+      google.accounts.id.renderButton(document.getElementById('gBtn'), {
+        type:'standard', theme:'filled_black', size:'large',
+        text:'signin_with', shape:'pill', width:300
+      });
+      document.getElementById('st').textContent='Google ile giriş yap';
+    }
   });
 }
 
@@ -202,8 +210,11 @@ function onCredential(response){
     // Sunucuya kaydet (polling için)
     if(sid){
       fetch('/auth/google-callback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:sid,idToken:idToken,displayName:displayName})})
-      .then(function(){ document.getElementById('st').textContent='Giriş başarılı! Bu sayfayı kapatabilirsin.'; })
-      .catch(function(){ document.getElementById('st').textContent='Giriş başarılı! Bu sayfayı kapatabilirsin.'; });
+      .then(function(){ 
+        document.getElementById('st').textContent='Giriş başarılı! Yönlendiriliyorsun...'; 
+        // Sayfayı otomatik kapat
+        setTimeout(function(){ try{window.close()}catch(e){} }, 300);
+      });
     }
   }).catch(function(e){
     document.getElementById('sp').style.display='none';
