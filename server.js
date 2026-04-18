@@ -123,103 +123,63 @@ try {
 const _pendingAuth = new Map();
 setInterval(() => { const n = Date.now(); for (const [k,v] of _pendingAuth) { if (n - v.ts > 300000) _pendingAuth.delete(k); } }, 60000);
 
-// Google OAuth sayfası — Google Identity Services (popup/redirect yok)
+// Google OAuth — doğrudan hesap seçiciye yönlendir
 app.get('/auth/google-popup', (req, res) => {
   const sid = req.query.sid || '';
-  const fbConfig = JSON.stringify({ apiKey: _fbCfg.apiKey, authDomain: _fbCfg.authDomain });
   const clientId = _fbCfg.googleClientId;
+  const redirectUri = `${req.protocol}://${req.get('host')}/auth/google-landing`;
+  const nonce = Math.random().toString(36).substr(2, 16);
   
+  // Doğrudan Google OAuth'a yönlendir — arada sayfa yok
+  const googleUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=id_token&scope=openid%20profile%20email&nonce=${nonce}&state=${sid}&prompt=select_account`;
+  res.redirect(googleUrl);
+});
+
+// Google OAuth callback — token'ı al ve sunucuya kaydet
+app.get('/auth/google-landing', (req, res) => {
+  const fbConfig = JSON.stringify({ apiKey: _fbCfg.apiKey, authDomain: _fbCfg.authDomain });
   res.send(`<!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<style>
-body{background:#0a0a12;color:#f0f0f8;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
-.box{text-align:center;padding:40px;width:100%;max-width:360px}
-.spin{border:4px solid #333;border-top:4px solid #4cc9f0;border-radius:50%;width:40px;height:40px;animation:s 1s linear infinite;margin:20px auto}
-@keyframes s{to{transform:rotate(360deg)}}
-#gBtn{margin:20px auto;display:flex;justify-content:center}
-</style>
-</head><body><div class="box">
-<div class="spin" id="sp"></div>
-<p id="st" style="margin-bottom:20px">Hesap seçici yükleniyor...</p>
-<div id="gBtn"></div>
-</div>
+<style>body{background:#0a0a12;color:#f0f0f8;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+.box{text-align:center;padding:40px}.spin{border:4px solid #333;border-top:4px solid #4cc9f0;border-radius:50%;width:40px;height:40px;animation:s 1s linear infinite;margin:20px auto}@keyframes s{to{transform:rotate(360deg)}}</style>
+</head><body><div class="box"><div class="spin"></div><p id="st">Giriş yapılıyor...</p></div>
 <script>
-var sid='${sid}';
 var fbConfig=${fbConfig};
-var clientId='${clientId}';
+// URL hash'ten id_token'ı al
+var hash = window.location.hash.substring(1);
+var params = {};
+hash.split('&').forEach(function(p){ var kv=p.split('='); params[kv[0]]=decodeURIComponent(kv[1]||''); });
 
-function waitForGoogle(){
-  if(typeof google!=='undefined' && google.accounts && google.accounts.id){
-    initGIS();
-  } else {
-    setTimeout(waitForGoogle, 200);
-  }
-}
-waitForGoogle();
+var idToken = params.id_token;
+var sid = params.state || '';
 
-function initGIS(){
-  document.getElementById('sp').style.display='none';
-  google.accounts.id.initialize({
-    client_id: clientId,
-    callback: onCredential,
-    auto_select: false,
-    cancel_on_tap_outside: false
-  });
-  // One Tap — otomatik hesap seçici göster
-  google.accounts.id.prompt(function(notification){
-    if(notification.isNotDisplayed() || notification.isSkippedMoment()){
-      // One Tap gösterilemedi → buton göster
-      google.accounts.id.renderButton(document.getElementById('gBtn'), {
-        type:'standard', theme:'filled_black', size:'large',
-        text:'signin_with', shape:'pill', width:300
-      });
-      document.getElementById('st').textContent='Google ile giriş yap';
-    }
-  });
-}
-
-function onCredential(response){
-  if(!response || !response.credential){ 
-    document.getElementById('st').textContent='Google credential alınamadı'; 
-    return; 
-  }
-  document.getElementById('sp').style.display='block';
-  document.getElementById('st').textContent='Giriş yapılıyor...';
-  document.getElementById('gBtn').style.display='none';
-  
-  // Firebase credential oluştur
-  var app = firebase.initializeApp(fbConfig, 'authpg');
-  var auth = firebase.auth(app);
-  var cred = firebase.auth.GoogleAuthProvider.credential(response.credential);
-  
-  auth.signInWithCredential(cred).then(function(result){
+if(!idToken){
+  document.getElementById('st').textContent='Token alınamadı';
+} else {
+  // Firebase ile doğrula
+  var app = firebase.initializeApp(fbConfig, 'landing');
+  var cred = firebase.auth.GoogleAuthProvider.credential(idToken);
+  firebase.auth(app).signInWithCredential(cred).then(function(result){
     return result.user.getIdToken();
-  }).then(function(idToken){
+  }).then(function(firebaseToken){
     var user = firebase.auth(app).currentUser;
     var displayName = user.displayName || user.email.split('@')[0];
     
-    document.getElementById('sp').style.display='none';
-    document.getElementById('st').textContent='Giriş başarılı!';
+    // postMessage (web popup)
+    try{ if(window.opener){ window.opener.postMessage({type:'google-auth',idToken:firebaseToken,displayName:displayName},'*'); setTimeout(function(){window.close()},300); return; } }catch(e){}
     
-    // postMessage (web popup için)
-    try{ if(window.opener){ window.opener.postMessage({type:'google-auth',idToken:idToken,displayName:displayName},'*'); setTimeout(function(){window.close()},500); return; } }catch(e){}
-    
-    // Sunucuya kaydet (polling için)
+    // Sunucuya kaydet (polling)
     if(sid){
-      fetch('/auth/google-callback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:sid,idToken:idToken,displayName:displayName})})
-      .then(function(){ 
-        document.getElementById('st').textContent='Giriş başarılı! Yönlendiriliyorsun...'; 
-        // Sayfayı otomatik kapat
+      fetch('/auth/google-callback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:sid,idToken:firebaseToken,displayName:displayName})})
+      .then(function(){
+        document.getElementById('st').textContent='Giriş başarılı!';
         setTimeout(function(){ try{window.close()}catch(e){} }, 300);
       });
     }
   }).catch(function(e){
-    document.getElementById('sp').style.display='none';
     document.getElementById('st').textContent='Hata: '+e.message;
-    document.getElementById('gBtn').style.display='flex';
   });
 }
 </script></body></html>`);
