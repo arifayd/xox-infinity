@@ -544,10 +544,39 @@
       });
     }
     
-    // Android: open Google auth in popup window
+    // Android: Google auth — Capacitor Browser + polling
+    var _authPoll = null;
     function openGooglePopup(){
-      const popup = window.open('/auth/google-popup', 'google_auth', 'width=500,height=600');
-      if(!popup){alert('Popup engellenmiş. Lütfen popup izni ver.');return;}
+      var sid = Math.random().toString(36).substr(2, 12);
+      var url = location.origin + '/auth/google-popup?sid=' + sid;
+      
+      // Capacitor Browser ile aç
+      if(isCapacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser){
+        window.Capacitor.Plugins.Browser.open({ url: url });
+      } else {
+        // Web fallback
+        window.open(url, 'google_auth', 'width=500,height=600');
+      }
+      
+      // Polling başlat
+      var att = 0;
+      if(_authPoll) clearInterval(_authPoll);
+      _authPoll = setInterval(function(){
+        att++;
+        if(att > 120){ clearInterval(_authPoll); _authPoll = null; return; }
+        fetch('/auth/google-result?sid=' + sid).then(function(r){ return r.json(); }).then(function(d){
+          if(d.ready){
+            clearInterval(_authPoll); _authPoll = null;
+            try{ if(isCapacitor && window.Capacitor.Plugins.Browser) window.Capacitor.Plugins.Browser.close(); }catch(e){}
+            // Auth sonucunu işle
+            fetch('/api/auth/firebase',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:d.idToken,username:d.displayName,language:L})})
+            .then(function(r){return r.json()}).then(function(dd){
+              if(dd.success){localStorage.setItem('gl_token',dd.token);U=dd.user;cS();if(dd.isNewUser){document.getElementById('unameDisplay').textContent=U.username;sS('username-screen')}else{sS('home-screen');uH()}}
+              else alert(dd.error);
+            }).catch(function(e){alert('Sunucu hatası: '+e.message)});
+          }
+        }).catch(function(){});
+      }, 1500);
     }
     
     // Listen for message from popup
